@@ -12,11 +12,29 @@ fn fps_update_system(
 	diagnostics: Res<Diagnostics>,
 	mut query: Query<(&FpsCounter, &mut Text)>,
 ) {
-	for mut text in &mut query.iter() {
+	for (ctl, mut text) in &mut query.iter() {
 		if let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
-			if let Some(average) = fps.average() {
-				text.1.value = format!("FPS: {:.2}", average);
+			if ctl.enabled {
+				if let Some(average) = fps.average() {
+					text.value = format!("FPS: {:.2}", average);
+				}
+			} else {
+				if !text.value.is_empty() {
+					text.value = String::new();
+				}
 			}
+		}
+	}
+}
+
+fn fps_control_system(
+	key_input: Res<Input<KeyCode>>,
+	mut query: Query<&mut FpsCounter>,
+) {
+
+	if key_input.just_pressed(KeyCode::F1) {
+		for mut counter in &mut query.iter() {
+			counter.enabled = !counter.enabled;
 		}
 	}
 }
@@ -35,7 +53,7 @@ pub fn setup(
 				..Default::default()
 			},
 			text: Text {
-				value: "FPS:".to_string(),
+				value: "".to_string(),
 				font: font_handle,
 				style: TextStyle {
 					font_size:60.0,
@@ -44,7 +62,7 @@ pub fn setup(
 			},
 			..Default::default()
 		})
-		.with(FpsCounter { enabled: true });
+		.with(FpsCounter { enabled: false });
 }
 
 pub struct UiPlugin;
@@ -53,6 +71,7 @@ impl Plugin for UiPlugin {
 	fn build(&self, app: &mut AppBuilder) {
 		app.add_plugin(FrameTimeDiagnosticsPlugin::default())
 			.add_startup_system(setup.system())
+			.add_system(fps_control_system.system())
 			.add_system(fps_update_system.system());
 	}
 }
