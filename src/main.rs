@@ -4,6 +4,11 @@ mod ui;
 
 use bevy::prelude::*;
 use map::MapPlugin;
+use mechanics::{
+	character::{ActiveCharacter, Character},
+	MechanicsPlugin,
+	TurnLimit,
+};
 use ui::UiPlugin;
 
 fn hello_world(time: Res<Time>, mut timer: ResMut<TestTtime>) {
@@ -32,6 +37,7 @@ fn main() {
 		.add_plugin(HelloPlugin)
 		.add_plugin(UiPlugin)
 		.add_plugin(MapPlugin)
+		.add_plugin(MechanicsPlugin)
 		.add_system(hello_world.system())
 		.add_startup_system(setup.system())
 		.run();
@@ -54,7 +60,7 @@ fn setup(
 		})
 		.spawn(Camera3dComponents {
 			transform: Transform::new(Mat4::face_toward(
-				Vec3::new(-10.0, 2.0, -10.0),
+				Vec3::new(-5.0, 4.0, -5.0),
 				Vec3::new(0.0, 0.0, 0.0),
 				Vec3::new(0.0, 1.0, 0.0),
 			)),
@@ -62,5 +68,16 @@ fn setup(
 		})
 		// .spawn((World::new(),))
 		.spawn((map::Map::empty_of_size(10, 5),))
+		.spawn((TurnLimit(4),))
+		.spawn((
+			Character::new_split(1, 1),
+			ActiveCharacter,
+			mechanics::DisplayGridPosition(Default::default()),
+		))
+		.with_bundle(PbrComponents {
+			mesh: meshes.add(Mesh::from(shape::Cube { size: 0.25 })),
+			material: materials.add(Color::rgb(0.5, 0.4, 0.3).into()),
+			..Default::default()
+		})
 		;
 }

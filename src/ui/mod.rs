@@ -2,6 +2,7 @@ use bevy::{
 	diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
 	prelude::*,
 };
+use crate::mechanics::{ActiveTurn, TurnLimit};
 
 #[derive(Debug, Default)]
 pub struct FpsCounter {
@@ -39,6 +40,19 @@ fn fps_control_system(
 	}
 }
 
+#[derive(Debug, Default)]
+pub struct TurnCounter;
+
+fn turn_system(
+	limit: Res<TurnLimit>,
+	turn: Res<ActiveTurn>,
+	mut query: Query<(&TurnCounter, &mut Text)>,
+) {
+	for (_ctl, mut text) in &mut query.iter() {
+		text.value = format!("{}/{}", turn.turn + 1, limit.0);
+	}
+}
+
 pub fn setup(
 	mut commands: Commands,
 	asset_server: Res<AssetServer>,
@@ -47,6 +61,7 @@ pub fn setup(
 
 	commands
 		.spawn(UiCameraComponents::default())
+		// FPS counter.
 		.spawn(TextComponents {
 			style: Style {
 				align_self: AlignSelf::FlexEnd,
@@ -62,7 +77,51 @@ pub fn setup(
 			},
 			..Default::default()
 		})
-		.with(FpsCounter { enabled: false });
+		.with(FpsCounter { enabled: false })
+		.spawn(TextComponents {
+			style: Style {
+				align_self: AlignSelf::FlexStart,
+				position_type: PositionType::Absolute,
+				position: Rect {
+					left: Val::Px(5.0),
+					bottom: Val::Px(5.0),
+					..Default::default()
+				},
+				..Default::default()
+			},
+			text: Text {
+				value: "".to_string(),
+				font: font_handle,
+				style: TextStyle {
+					font_size:60.0,
+					color: Color::BLACK,
+				}
+			},
+			..Default::default()
+		})
+		.with(TurnCounter)
+		.spawn(TextComponents {
+			style: Style {
+				align_self: AlignSelf::FlexStart,
+				position_type: PositionType::Absolute,
+				position: Rect {
+					left: Val::Px(4.0),
+					bottom: Val::Px(4.0),
+					..Default::default()
+				},
+				..Default::default()
+			},
+			text: Text {
+				value: "".to_string(),
+				font: font_handle,
+				style: TextStyle {
+					font_size:60.0,
+					color: Color::WHITE,
+				}
+			},
+			..Default::default()
+		})
+		.with(TurnCounter);
 }
 
 pub struct UiPlugin;
@@ -72,6 +131,7 @@ impl Plugin for UiPlugin {
 		app.add_plugin(FrameTimeDiagnosticsPlugin::default())
 			.add_startup_system(setup.system())
 			.add_system(fps_control_system.system())
-			.add_system(fps_update_system.system());
+			.add_system(fps_update_system.system())
+			.add_system(turn_system.system());
 	}
 }

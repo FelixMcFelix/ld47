@@ -114,7 +114,11 @@ impl Map {
 	/// Assumes that positions were chosen by neighbourhood.
 	pub fn move_allowed_by_terrain(&self, former_pos: &GridPosition, next_pos: &GridPosition) -> bool {
 		let dest = next_pos.unroll(self.width) as usize;
-		match self.heights.get(dest).map(|v| (*v).into()) {
+		next_pos.x < self.width
+			&& next_pos.x >= 0
+			&& next_pos.y < self.height
+			&& next_pos.y >= 0
+			&& match self.heights.get(dest).map(|v| (*v).into()) {
 			Some(TileHeight::Passable(h)) => {
 				let src = former_pos.unroll(self.width) as usize;
 				match self.heights.get(src).map(|v| (*v).into()) {
@@ -147,7 +151,7 @@ impl Map {
 
 				let pos = GridPosition::roll(i as Ordinate, self.width);
 
-				let height = TileHeight::from(self.heights[i]).to_raw_height() + (pos.y as usize / 2);
+				let height = TileHeight::from(self.heights[i]).to_raw_height();
 
 				// println!("TIle has {:?} height {:?}", pos, height);
 
@@ -155,7 +159,7 @@ impl Map {
 					mesh: handle,
 					material: materials.add(Color::rgb(0.5 * (pos.x as f32 / 5.0), 0.4 * (pos.y as f32 / 5.0), 0.3).into()),
 					transform: Transform::from_translation(
-						Vec3::new(pos.x as f32, height as f32, pos.y as f32)
+						Vec3::new(-pos.x as f32, height as f32, pos.y as f32)
 					),
 					..Default::default()
 				}).with(WorldGeometry);
