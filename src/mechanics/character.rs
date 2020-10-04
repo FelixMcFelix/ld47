@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use super::Alive;
 use super::{
 	ActiveTurn,
 	CameraFacer,
@@ -87,14 +88,14 @@ impl Character {
 		mut textures: &mut ResMut<Assets<Texture>>,
 	) {
 		let texture_handle = asset_server
-	        .load_sync(&mut textures, "assets/placeholder/ramza.png")
-	        .unwrap();
+			.load_sync(&mut textures, "assets/placeholder/ramza.png")
+			.unwrap();
 
-	    let material = materials.add(StandardMaterial {
-	    	albedo_texture: Some(texture_handle),
-	    	shaded: false,
-	    	..Default::default()
-	    });
+		let material = materials.add(StandardMaterial {
+			albedo_texture: Some(texture_handle),
+			shaded: false,
+			..Default::default()
+		});
 
 		let pos = self.current;
 
@@ -103,6 +104,7 @@ impl Character {
 		comms.spawn((
 				self,
 				ActiveCharacter,
+				Alive::default(),
 				DisplayGridPosition(pos),
 				CollideGridPosition(pos),
 				CameraFacer,

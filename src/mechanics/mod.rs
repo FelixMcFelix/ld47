@@ -1,12 +1,15 @@
 pub mod camera;
 pub mod character;
 pub mod constants;
+pub mod ender;
+pub mod spawner;
 
 use bevy::prelude::*;
 
 use camera::CameraPlugin;
 use character::CharacterCommand;
 use crate::map::Map;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Direction {
@@ -19,7 +22,7 @@ pub enum Direction {
 pub type Ordinate = isize;
 
 // height is a derived property
-#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
+#[derive(Clone, Copy, Debug, Default, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct GridPosition {
 	pub x: Ordinate,
 	pub y: Ordinate,
@@ -27,6 +30,25 @@ pub struct GridPosition {
 
 pub struct DisplayGridPosition(pub GridPosition);
 pub struct CollideGridPosition(pub GridPosition);
+
+pub struct Alive(pub bool);
+
+impl Default for Alive {
+	fn default() -> Self {
+	    Self(true)
+	}
+}
+
+fn despawn_if_not_alive(
+	mut commands: Commands,
+	mut living: Query<(Entity, &Alive)>,
+) {
+	for (ent, alive) in &mut living.iter() {
+		if !alive.0 {
+			commands.despawn_recursive(ent);
+		}
+	}
+}
 
 impl GridPosition {
 	pub fn clamp(self, w: Ordinate, h: Ordinate) -> Self {
@@ -108,7 +130,10 @@ impl Plugin for MechanicsPlugin {
 			.add_plugin(CameraPlugin)
 			.add_resource(OccupationMap::default())
 			.add_system(collision_populater.system())
+			.add_system(despawn_if_not_alive.system())
 			.add_plugin(character::CharacterPlugin)
+			.add_plugin(spawner::SpawnerPlugin)
+			.add_plugin(ender::EnderPlugin)
 			.add_system(camera_facer.system())
 			.add_resource(TurnLimit(7))
 			.add_resource(ActiveTurn::default())
@@ -116,8 +141,11 @@ impl Plugin for MechanicsPlugin {
 	}
 }
 
-#[derive(Clone, Copy, Debug, Default, Properties)]
+#[derive(Clone, Copy, Debug, Default, Properties, Deserialize, Serialize)]
 pub struct TurnLimit(pub usize);
+
+#[derive(Clone, Copy, Debug, Default, Properties, Deserialize, Serialize)]
+pub struct GhostLimit(pub usize);
 
 #[derive(Clone, Copy, Debug, Default, Properties)]
 pub struct ActiveTurn {
@@ -151,6 +179,10 @@ impl ActiveTurn {
 		self.active_ent_refresh += 1;
 		self.active_ent = self.active_ent_refresh;
 		self.turn = 0;
+	}
+
+	pub fn reinit(&mut self) {
+		*self = Default::default();
 	}
 }
 

@@ -2,6 +2,7 @@ mod map;
 mod mechanics;
 mod ui;
 
+use bevy::ecs::WorldWriter;
 use bevy::{
 	prelude::*,
 	render::pass::ClearColor,
@@ -34,6 +35,9 @@ impl Plugin for HelloPlugin {
 }
 
 fn main() {
+	// map::meta::Levels::generate_example();
+	// map::Map::generate_example_of_size(4, 3);
+
 	App::build()
 		.add_resource(WindowDescriptor {
 			title: "LD47: Stuck in a Loop".to_string(),
@@ -41,6 +45,7 @@ fn main() {
 		})
 		.add_resource(ClearColor(Color::hex("374b6d").expect("Ha")))
 		.add_default_plugins()
+		.add_resource(map::meta::Levels::get_self())
 		// .add_plugin(BillboardPlugin)
 		// .add_resource(Msaa { samples: 4 })
 		.add_plugin(HelloPlugin)
@@ -49,6 +54,7 @@ fn main() {
 		.add_plugin(MechanicsPlugin)
 		.add_system(hello_world.system())
 		.add_startup_system(setup.system())
+		// .add_system(world_saver.system())
 		.run();
 }
 
@@ -57,7 +63,6 @@ fn setup(
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
 	mut textures: ResMut<Assets<Texture>>,
-	// mut billboards: ResMut<Assets<BillboardMaterial>>,
 	asset_server: Res<AssetServer>,
 ) {
 	commands
@@ -73,9 +78,5 @@ fn setup(
 			)).with_scale(1.0/75.0),
 			..Default::default()
 		})
-		.with(mechanics::CameraFaced)
-		.spawn((map::Map::empty_of_size(10, 5),))
-		.spawn((TurnLimit(4),));
-
-	Character::new_split(1, 1).spawn(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures)
+		.with(mechanics::CameraFaced);
 }

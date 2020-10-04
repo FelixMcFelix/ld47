@@ -1744,6 +1744,8 @@ dependencies = [
  "bevy",
  "enum_primitive",
  "lazy_static",
+ "ron",
+ "serde",
 ]
 
 [[package]]

@@ -1,15 +1,27 @@
+pub mod meta;
+
+use crate::mechanics::ActiveTurn;
+use crate::mechanics::Alive;
 use crate::mechanics::{
 	constants::*,
+	ender::Ender,
+	spawner::Spawner,
+	DisplayGridPosition,
+	GhostLimit,
 	GridPosition,
 	OccupationMap,
 	Ordinate,
+	TurnLimit,
 };
+use bevy::render::mesh::{VertexAttribute, VertexAttributeValues};
 use bevy::{
 	asset::HandleId,
 	prelude::*,
 };
 use enum_primitive::*;
 use lazy_static::lazy_static;
+use self::meta::Levels;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -33,7 +45,7 @@ impl From<isize> for TileHeight {
 
 impl Default for TileHeight {
 	fn default() -> Self {
-	    TileHeight::Passable(0)
+		TileHeight::Passable(0)
 	}
 }
 
@@ -63,13 +75,40 @@ enum_from_primitive!{
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum EntShape {
 	Billboard = 0,
+	BoostSquare,
 }
 }
 
 impl EntShape {
 	pub fn mesh(self) -> Mesh {
+		use EntShape::*;
 		match self {
-			EntShape::Billboard => Mesh::from(shape::Quad { size: (32.0/38.0, 1.0).into(), flip: false }),
+			Billboard => Mesh::from(shape::Quad { size: (32.0/38.0, 1.0).into(), flip: false }),
+			BoostSquare => {
+				let mut m = Mesh::from(shape::Plane { size: 1.0 });
+				let boost_height = -0.49;
+
+				for attr_block in m.attributes.iter_mut() {
+					if attr_block.name == VertexAttribute::POSITION {
+						use VertexAttributeValues::*;
+						match &mut attr_block.values {
+							Float3(ref mut v) => {
+								for val_set in v.iter_mut() {
+									val_set[1] += boost_height;
+								}
+							},
+							Float4(ref mut v) => {
+								for val_set in v.iter_mut() {
+									val_set[1] += boost_height;
+								}
+							},
+							_ => {}
+						}
+					}
+				}
+
+				m
+			},
 		}
 	}
 
@@ -99,6 +138,77 @@ lazy_static! {
 
 		m
 	};
+}
+
+enum_from_primitive!{
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum EntClass {
+	Start = 0,
+	End,
+}
+}
+
+impl EntClass {
+	pub fn create(
+		self,
+		pos: GridPosition,
+		comms: &mut Commands,
+		mut meshes: &mut ResMut<Assets<Mesh>>,
+		materials: &mut ResMut<Assets<StandardMaterial>>,
+		asset_server: &Res<AssetServer>,
+		mut textures: &mut ResMut<Assets<Texture>>,
+	) {
+		match self {
+			EntClass::Start => {
+				let texture_handle = asset_server
+					.load_sync(&mut textures, "assets/placeholder/start.png")
+					.unwrap();
+
+				let material = materials.add(StandardMaterial {
+					albedo_texture: Some(texture_handle),
+					shaded: false,
+					..Default::default()
+				});
+
+				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
+
+				comms.spawn((
+						Spawner::default(),
+						DisplayGridPosition(pos),
+					))
+					.with_bundle(PbrComponents {
+						mesh,
+						material,
+						..Default::default()
+					});
+			},
+			EntClass::End => {
+				let texture_handle = asset_server
+					.load_sync(&mut textures, "assets/placeholder/end.png")
+					.unwrap();
+
+				let material = materials.add(StandardMaterial {
+					albedo_texture: Some(texture_handle),
+					shaded: false,
+					..Default::default()
+				});
+
+				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
+
+				comms.spawn((
+						Ender::default(),
+						DisplayGridPosition(pos),
+					))
+					.with_bundle(PbrComponents {
+						mesh,
+						material,
+						..Default::default()
+					});
+			},
+		}
+
+		comms.with(Alive::default());
+	}
 }
 
 
@@ -131,7 +241,13 @@ impl TileShape {
 	}
 }
 
-#[derive(Clone, Properties, Debug, Default)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct EntBlueprint {
+	class: u8,
+	pos: GridPosition,
+}
+
+#[derive(Clone, Properties, Debug, Default, Deserialize, Serialize)]
 pub struct Map {
 	/// Map width.
 	pub width: Ordinate,
@@ -145,7 +261,13 @@ pub struct Map {
 	pub heights: Vec<isize>,
 
 	#[property(ignore)]
-	pub created: bool
+	pub created: bool,
+
+	pub ents: Option<Vec<EntBlueprint>>,
+
+	pub turn_limit: TurnLimit,
+
+	pub ghost_limit: Option<GhostLimit>,
 }
 
 impl Map {
@@ -165,6 +287,14 @@ impl Map {
 			tile_shapes: vec![Default::default(); els],
 			heights: vec![Default::default(); els],
 			created: false,
+			ents: Some(vec![
+				EntBlueprint{
+					class: EntClass::Start as u8,
+					pos: GridPosition{ x:0, y:0 }
+				},
+			]),
+			turn_limit: TurnLimit(7),
+			ghost_limit: Some(GhostLimit(1)),
 		}
 	}
 
@@ -206,8 +336,6 @@ impl Map {
 
 				let height = TileHeight::from(self.heights[i]).to_raw_height();
 
-				// println!("TIle has {:?} height {:?}", pos, height);
-
 				world.spawn(PbrComponents {
 					mesh: handle,
 					material: materials.add(Color::rgb(0.5 * (pos.x as f32 / 5.0), 0.4 * (pos.y as f32 / 5.0), 0.3).into()),
@@ -215,7 +343,36 @@ impl Map {
 						Vec3::new(-pos.x as f32, height as f32, pos.y as f32)
 					),
 					..Default::default()
-				}).with(WorldGeometry);
+				}).with(WorldGeometry)
+				.with(Alive::default());
+			}
+		}
+	}
+
+	fn create_limits(
+		&self,
+		comms: &mut Commands,
+	) {
+		comms.insert_resource(self.turn_limit);
+
+		if let Some(ghosts) = self.ghost_limit {
+			comms.insert_resource(ghosts);
+		}
+	}
+
+	fn create_entities(
+		&self,
+		world: &mut Commands,
+		meshes: &mut ResMut<Assets<Mesh>>,
+		materials: &mut ResMut<Assets<StandardMaterial>>,
+		asset_server: &Res<AssetServer>,
+		textures: &mut ResMut<Assets<Texture>>,
+	) {
+		if let Some(ents) = &self.ents {
+			for blueprint in ents {
+				if let Some(ent) = EntClass::from_u8(blueprint.class) {
+					ent.create(blueprint.pos, world, meshes, materials, asset_server, textures)
+				}
 			}
 		}
 	}
@@ -234,18 +391,31 @@ impl Plugin for MapPlugin {
 
 fn map_creator(
 	mut commands: Commands,
+	level_info: ResMut<Levels>,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
+	asset_server: Res<AssetServer>,
+	mut textures: ResMut<Assets<Texture>>,
 	mut occupation: ResMut<OccupationMap>,
+	mut turn: ResMut<ActiveTurn>,
 	mut query: Query<&mut Map>,
 ) {
+	let mut was_empty = true;
 	for mut map in &mut query.iter() {
 		if !map.created {
 			println!("I am creating this map");
 			map.create_geometry(&mut commands, &mut meshes, &mut materials);
+			map.create_limits(&mut commands);
+			map.create_entities(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures);
 			map.created = true;
 
 			occupation.0 = vec![false; map.len()];
 		}
+		was_empty = false;
+	}
+
+	if was_empty {
+		turn.reinit();
+		commands.spawn((level_info.load_current(),Alive::default()));
 	}
 }

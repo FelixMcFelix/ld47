@@ -1,0 +1,31 @@
+(
+    width: 4,
+    height: 3,
+    tiles: [
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+    ],
+    tile_shapes: [
+        0,0,0,0,
+        0,0,0,0,
+        0,0,0,0,
+    ],
+    heights: [
+        4,4,4,4,
+        2,2,2,2,
+        0,0,0,0,
+    ],
+    created: false,
+    ents: Some([
+        (
+            class: 0,
+            pos: (
+                x: 0,
+                y: 1,
+            ),
+        ),
+    ]),
+    turn_limit: (7),
+    ghost_limit: Some((1)),
+)

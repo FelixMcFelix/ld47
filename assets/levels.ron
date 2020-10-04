@@ -1,0 +1,13 @@
+(
+    data: [
+        (
+            name: "An Introduction",
+            path: "assets/levels/intro.ron",
+        ),
+        (
+            name: "Button Mania",
+            path: "assets/levels/first_button.ron",
+        ),
+    ],
+    start_at: 0,
+)
