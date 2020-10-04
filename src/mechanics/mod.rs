@@ -1,3 +1,4 @@
+pub mod buttons;
 pub mod camera;
 pub mod character;
 pub mod constants;
@@ -134,6 +135,7 @@ impl Plugin for MechanicsPlugin {
 			.add_plugin(character::CharacterPlugin)
 			.add_plugin(spawner::SpawnerPlugin)
 			.add_plugin(ender::EnderPlugin)
+			.add_plugin(buttons::ButtonPlugin)
 			.add_system(camera_facer.system())
 			.add_resource(TurnLimit(7))
 			.add_resource(ActiveTurn::default())

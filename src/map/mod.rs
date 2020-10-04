@@ -1,11 +1,17 @@
 pub mod meta;
 
-use crate::mechanics::ActiveTurn;
-use crate::mechanics::Alive;
+use crate::mechanics::buttons::{
+	FireSignalOnCollide,
+	OccupySpaceUntilSignal,
+	RegisterSignal,
+};
 use crate::mechanics::{
+	buttons::SignalCounter,
 	constants::*,
 	ender::Ender,
 	spawner::Spawner,
+	ActiveTurn,
+	Alive,
 	DisplayGridPosition,
 	GhostLimit,
 	GridPosition,
@@ -140,17 +146,20 @@ lazy_static! {
 	};
 }
 
-enum_from_primitive!{
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
-pub enum EntClass {
-	Start = 0,
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct ActionChannel(pub usize);
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+pub enum EntData {
+	Start,
 	End,
-}
+	Button(ActionChannel),
+	Door(ActionChannel),
 }
 
-impl EntClass {
+impl EntData {
 	pub fn create(
-		self,
+		&self,
 		pos: GridPosition,
 		comms: &mut Commands,
 		mut meshes: &mut ResMut<Assets<Mesh>>,
@@ -159,7 +168,7 @@ impl EntClass {
 		mut textures: &mut ResMut<Assets<Texture>>,
 	) {
 		match self {
-			EntClass::Start => {
+			EntData::Start => {
 				let texture_handle = asset_server
 					.load_sync(&mut textures, "assets/placeholder/start.png")
 					.unwrap();
@@ -182,7 +191,7 @@ impl EntClass {
 						..Default::default()
 					});
 			},
-			EntClass::End => {
+			EntData::End => {
 				let texture_handle = asset_server
 					.load_sync(&mut textures, "assets/placeholder/end.png")
 					.unwrap();
@@ -205,12 +214,64 @@ impl EntClass {
 						..Default::default()
 					});
 			},
+			EntData::Button(data) => {
+				let texture_handle = asset_server
+					.load_sync(&mut textures, "assets/placeholder/button.png")
+					.unwrap();
+
+				let material = materials.add(StandardMaterial {
+					albedo_texture: Some(texture_handle),
+					shaded: false,
+					..Default::default()
+				});
+
+				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
+
+				comms.spawn((
+						FireSignalOnCollide::new(data.0, pos),
+						RegisterSignal(data.0),
+						DisplayGridPosition(pos),
+					))
+					.with_bundle(PbrComponents {
+						mesh,
+						material,
+						..Default::default()
+					});
+			},
+			EntData::Door(data) => {
+				let texture_handle = asset_server
+					.load_sync(&mut textures, "assets/placeholder/door.png")
+					.unwrap();
+
+				let material = materials.add(StandardMaterial {
+					albedo_texture: Some(texture_handle),
+					shaded: false,
+					..Default::default()
+				});
+
+				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
+
+				comms.spawn((
+						OccupySpaceUntilSignal::new(data.0, pos),
+						DisplayGridPosition(pos),
+					))
+					.with_bundle(PbrComponents {
+						mesh,
+						material,
+						..Default::default()
+					});
+			},
 		}
 
 		comms.with(Alive::default());
 	}
 }
 
+impl Default for EntData {
+	fn default() -> Self {
+		EntData::Start
+	}
+}
 
 enum_from_primitive!{
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -243,8 +304,8 @@ impl TileShape {
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct EntBlueprint {
-	class: u8,
 	pos: GridPosition,
+	data: EntData,
 }
 
 #[derive(Clone, Properties, Debug, Default, Deserialize, Serialize)]
@@ -289,8 +350,8 @@ impl Map {
 			created: false,
 			ents: Some(vec![
 				EntBlueprint{
-					class: EntClass::Start as u8,
-					pos: GridPosition{ x:0, y:0 }
+					pos: GridPosition{ x:0, y:0 },
+					data: EntData::Start,
 				},
 			]),
 			turn_limit: TurnLimit(7),
@@ -370,9 +431,7 @@ impl Map {
 	) {
 		if let Some(ents) = &self.ents {
 			for blueprint in ents {
-				if let Some(ent) = EntClass::from_u8(blueprint.class) {
-					ent.create(blueprint.pos, world, meshes, materials, asset_server, textures)
-				}
+				blueprint.data.create(blueprint.pos, world, meshes, materials, asset_server, textures)
 			}
 		}
 	}
@@ -398,6 +457,7 @@ fn map_creator(
 	mut textures: ResMut<Assets<Texture>>,
 	mut occupation: ResMut<OccupationMap>,
 	mut turn: ResMut<ActiveTurn>,
+	mut signals: ResMut<SignalCounter>,
 	mut query: Query<&mut Map>,
 ) {
 	let mut was_empty = true;
@@ -416,6 +476,7 @@ fn map_creator(
 
 	if was_empty {
 		turn.reinit();
+		signals.reinit();
 		commands.spawn((level_info.load_current(),Alive::default()));
 	}
 }

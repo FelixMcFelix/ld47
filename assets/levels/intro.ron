@@ -19,14 +19,14 @@
     created: false,
     ents: Some([
         (
-            class: 0,
+            data: Start,
             pos: (
                 x: 0,
                 y: 1,
             ),
         ),
         (
-            class: 1,
+            data: End,
             pos: (
                 x: 3,
                 y: 1,

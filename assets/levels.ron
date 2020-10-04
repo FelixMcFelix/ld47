@@ -9,5 +9,5 @@
             path: "assets/levels/first_button.ron",
         ),
     ],
-    start_at: 0,
+    start_at: 1,
 )
