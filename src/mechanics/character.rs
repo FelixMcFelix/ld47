@@ -1,9 +1,11 @@
 use bevy::prelude::*;
 use super::{
 	ActiveTurn,
+	CollideGridPosition,
 	Direction,
 	DisplayGridPosition,
 	GridPosition,
+	OccupationMap,
 	Ordinate,
 	TurnLimit,
 };
@@ -39,12 +41,13 @@ impl Character {
 		Self::new(GridPosition{ x, y })
 	}
 
-	pub fn do_action(&mut self, action: CharacterCommand, map: &Map) {
+	pub fn do_action(&mut self, action: CharacterCommand, map: &Map, colliders: &OccupationMap) {
 		let supposed_dest = self.current.destination(action);
 
 		println!("{:?} -> {:?}", action, supposed_dest);
+		let normalised = supposed_dest.clamp(map.width, map.height).unroll(map.width) as usize;
 
-		if map.move_allowed_by_terrain(&self.current, &supposed_dest) {
+		if map.move_allowed_by_terrain(&self.current, &supposed_dest) && !colliders.0[normalised] {
 			self.current = supposed_dest;
 			println!("moved to {:?}", supposed_dest);
 		} else {
@@ -52,10 +55,10 @@ impl Character {
 		}
 	}
 
-	pub fn do_queued_action(&mut self, map: &Map) {
+	pub fn do_queued_action(&mut self, map: &Map, colliders: &OccupationMap) {
 		println!("Queue!");
 		let action = self.command_list[self.cmd_list_pos];
-		self.do_action(action, map);
+		self.do_action(action, map, colliders);
 		self.cmd_list_pos += 1;
 	}
 
@@ -78,10 +81,13 @@ impl Character {
 		mut meshes: &mut ResMut<Assets<Mesh>>,
 		mut materials: &mut ResMut<Assets<StandardMaterial>>,
 	) {
+		let pos = self.current;
+
 		comms.spawn((
 				self,
 				ActiveCharacter,
-				DisplayGridPosition(Default::default()),
+				DisplayGridPosition(pos),
+				CollideGridPosition(pos),
 			))
 			.with_bundle(PbrComponents {
 				mesh: meshes.add(Mesh::from(shape::Cube { size: 0.25 })),
@@ -98,7 +104,8 @@ impl Plugin for CharacterPlugin {
 		app.add_system(char_control.system())
 			.add_system(char_act.system())
 			.add_system(char_display.system())
-			.add_system(char_reset.system());
+			.add_system(char_reset.system())
+			.add_system(char_set_collision.system());
 	}
 }
 
@@ -108,6 +115,7 @@ pub struct InactiveCharacter;
 
 fn char_control(
 	limit: Res<TurnLimit>,
+	occupation: ResMut<OccupationMap>,
 	mut turn: ResMut<ActiveTurn>,
 	key_input: Res<Input<KeyCode>>,
 	mut map_query: Query<&Map>,
@@ -144,7 +152,7 @@ fn char_control(
 					// ALWAYS push action regardless of whether or not it is doable.
 					character.command_list.push(action);
 
-					character.do_action(action, map);
+					character.do_action(action, map, &occupation);
 
 					turn.march_turn();
 				}
@@ -156,6 +164,7 @@ fn char_control(
 fn char_act(
 	limit: Res<TurnLimit>,
 	mut turn: ResMut<ActiveTurn>,
+	mut occupation: ResMut<OccupationMap>,
 	mut map_query: Query<&Map>,
 	mut query: Query<(&mut Character, &InactiveCharacter)>,
 ) {
@@ -163,7 +172,7 @@ fn char_act(
 		for (mut character, _inactive) in &mut query.iter() {
 			if turn.allow_turn(limit.0, character.my_turn) {
 				// ALWAYS push action regardless of whether or not it is doable.
-				character.do_queued_action(map);
+				character.do_queued_action(map, &occupation);
 
 				turn.march_turn();
 			}
@@ -173,6 +182,14 @@ fn char_act(
 
 fn char_display(
 	mut query: Query<(&Character, &mut DisplayGridPosition)>,
+) {
+	for (character, mut pos) in &mut query.iter() {
+		pos.0 = character.current;
+	}	
+}
+
+fn char_set_collision(
+	mut query: Query<(&Character, &mut CollideGridPosition)>,
 ) {
 	for (character, mut pos) in &mut query.iter() {
 		pos.0 = character.current;

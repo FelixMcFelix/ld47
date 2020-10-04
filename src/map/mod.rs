@@ -1,6 +1,7 @@
 use crate::mechanics::{
 	constants::*,
 	GridPosition,
+	OccupationMap,
 	Ordinate,
 };
 use bevy::{
@@ -183,6 +184,7 @@ fn map_creator(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
+	mut occupation: ResMut<OccupationMap>,
 	mut query: Query<&mut Map>,
 ) {
 	for mut map in &mut query.iter() {
@@ -190,6 +192,8 @@ fn map_creator(
 			println!("I am creating this map");
 			map.create_geometry(&mut commands, &mut meshes, &mut materials);
 			map.created = true;
+
+			occupation.0 = vec![false; map.len()];
 		}
 	}
 }

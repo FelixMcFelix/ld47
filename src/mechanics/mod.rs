@@ -24,8 +24,16 @@ pub struct GridPosition {
 }
 
 pub struct DisplayGridPosition(pub GridPosition);
+pub struct CollideGridPosition(pub GridPosition);
 
 impl GridPosition {
+	pub fn clamp(self, w: Ordinate, h: Ordinate) -> Self {
+		Self {
+			x: self.x.max(0).min(w-1),
+			y: self.y.max(0).min(h-1),
+		}
+	}
+
 	pub fn roll(ordinate: Ordinate, map_w: Ordinate) -> Self {
 		Self {
 			x: ordinate / map_w,
@@ -56,6 +64,9 @@ impl GridPosition {
 	}
 }
 
+#[derive(Debug, Default)]
+pub struct OccupationMap(pub Vec<bool>);
+
 pub struct RenderPlugin;
 
 impl Plugin for RenderPlugin {
@@ -69,6 +80,8 @@ pub struct MechanicsPlugin;
 impl Plugin for MechanicsPlugin {
 	fn build(&self, app: &mut AppBuilder) {
 		app.add_plugin(RenderPlugin)
+			.add_resource(OccupationMap::default())
+			.add_system(collision_populater.system())
 			.add_plugin(character::CharacterPlugin)
 			.add_resource(TurnLimit(7))
 			.add_resource(ActiveTurn::default());
@@ -107,6 +120,24 @@ impl ActiveTurn {
 		self.active_ent_refresh += 1;
 		self.active_ent = self.active_ent_refresh;
 		self.turn = 0;
+	}
+}
+
+fn collision_populater(
+	mut occupation: ResMut<OccupationMap>,
+	mut map_query: Query<&Map>,
+	mut query: Query<&CollideGridPosition>,
+) {
+	for map in &mut map_query.iter() {
+		let o_len = occupation.0.len();
+		occupation.0.resize(map.len(), false);
+		occupation.0[..o_len].iter_mut()
+			.map(|x| *x = false)
+			.count();
+
+		for pos in &mut query.iter() {
+			occupation.0[pos.0.unroll(map.width) as usize] = true;
+		}
 	}
 }
 
