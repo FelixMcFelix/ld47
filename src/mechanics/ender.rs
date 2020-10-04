@@ -14,7 +14,8 @@ pub struct EnderPlugin;
 
 impl Plugin for EnderPlugin {
 	fn build(&self, app: &mut AppBuilder) {
-		app.add_system(ender_progresses_level.system());
+		app.add_system(ender_progresses_level.system())
+			.add_system(restart_button.system());
 	}
 }
 
@@ -39,13 +40,27 @@ fn ender_progresses_level(
 	}
 
 	if let Some(_end_pos) = do_end {
-		println!("Done!");
 		//despawn all
-		for mut alive in &mut ents_query.iter() {
-			alive.0 = false;
-		}
+		trigger_restart(&mut ents_query);
 
 		// increment map.
 		level_info.load_next();
+	}
+}
+
+fn restart_button(
+	inputs: Res<Input<KeyCode>>,
+	mut ents_query: Query<&mut Alive>,
+) {
+	if inputs.just_pressed(KeyCode::Back) {
+		trigger_restart(&mut ents_query);
+	}
+}
+
+fn trigger_restart(
+	ents_query: &mut Query<&mut Alive>,
+) {
+	for mut alive in &mut ents_query.iter() {
+		alive.0 = false;
 	}
 }
