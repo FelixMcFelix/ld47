@@ -2,7 +2,10 @@ mod map;
 mod mechanics;
 mod ui;
 
-use bevy::prelude::*;
+use bevy::{
+	prelude::*,
+	render::pass::ClearColor,
+};
 use map::MapPlugin;
 use mechanics::{
 	character::{ActiveCharacter, Character},
@@ -32,6 +35,11 @@ impl Plugin for HelloPlugin {
 
 fn main() {
 	App::build()
+		.add_resource(WindowDescriptor {
+			title: "LD47: Stuck in a Loop".to_string(),
+			..Default::default()
+		})
+		.add_resource(ClearColor(Color::hex("374b6d").expect("Ha")))
 		.add_default_plugins()
 		// .add_resource(Msaa { samples: 4 })
 		.add_plugin(HelloPlugin)
@@ -58,12 +66,12 @@ fn setup(
 			transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
 			..Default::default()
 		})
-		.spawn(Camera3dComponents {
+		.spawn(Camera2dComponents {
 			transform: Transform::new(Mat4::face_toward(
 				Vec3::new(-5.0, 4.0, -5.0),
 				Vec3::new(0.0, 0.0, 0.0),
 				Vec3::new(0.0, 1.0, 0.0),
-			)),
+			)).with_scale(1.0/50.0),
 			..Default::default()
 		})
 		// .spawn((World::new(),))
