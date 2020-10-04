@@ -1,8 +1,10 @@
+pub mod camera;
 pub mod character;
 pub mod constants;
 
 use bevy::prelude::*;
 
+use camera::CameraPlugin;
 use character::CharacterCommand;
 use crate::map::Map;
 
@@ -64,8 +66,31 @@ impl GridPosition {
 	}
 }
 
+pub struct CameraFaced;
+pub struct CameraFacer;
+
+fn camera_facer(
+	mut cameras: Query<(&CameraFaced, &Transform)>,
+	mut query: Query<(&CameraFacer, &mut Transform)>,
+) {
+	for (_camera, camera_tx) in &mut cameras.iter() {
+		let face_axis = camera_tx.value().z_axis();
+		let rot_angle = face_axis.z().atan2(face_axis.x());
+		for (_tag, mut ent_tx) in &mut query.iter() {
+			ent_tx.set_rotation(Quat::from_rotation_y(rot_angle));
+		}
+	}
+}
+
 #[derive(Debug, Default)]
 pub struct OccupationMap(pub Vec<bool>);
+
+impl OccupationMap {
+	pub fn move_collider(&mut self, from: usize, to: usize) {
+		self.0[from] = false;
+		self.0[to] = true;
+	}
+}
 
 pub struct RenderPlugin;
 
@@ -80,11 +105,14 @@ pub struct MechanicsPlugin;
 impl Plugin for MechanicsPlugin {
 	fn build(&self, app: &mut AppBuilder) {
 		app.add_plugin(RenderPlugin)
+			.add_plugin(CameraPlugin)
 			.add_resource(OccupationMap::default())
 			.add_system(collision_populater.system())
 			.add_plugin(character::CharacterPlugin)
+			.add_system(camera_facer.system())
 			.add_resource(TurnLimit(7))
-			.add_resource(ActiveTurn::default());
+			.add_resource(ActiveTurn::default())
+			.add_system(turn_lockout.system());
 	}
 }
 
@@ -96,6 +124,7 @@ pub struct ActiveTurn {
 	active_ent_refresh: usize,
 	active_ent: usize,
 	pub turn: usize,
+	block_turn: bool,
 }
 
 impl ActiveTurn {
@@ -104,7 +133,7 @@ impl ActiveTurn {
 	}
 
 	pub fn allow_turn(&self, limit: usize, my_subturn: usize) -> bool {
-		self.turn != limit && my_subturn == self.active_ent
+		!self.block_turn && self.turn != limit && my_subturn == self.active_ent
 	}
 
 	pub fn march_turn(&mut self) {
@@ -114,6 +143,8 @@ impl ActiveTurn {
 		} else {
 			self.active_ent -= 1;
 		}
+
+		self.block_turn = false;
 	}
 
 	pub fn reset_and_add_ent(&mut self) {
@@ -121,6 +152,12 @@ impl ActiveTurn {
 		self.active_ent = self.active_ent_refresh;
 		self.turn = 0;
 	}
+}
+
+fn turn_lockout(
+	mut turn: ResMut<ActiveTurn>,
+) {
+	turn.block_turn = false;
 }
 
 fn collision_populater(

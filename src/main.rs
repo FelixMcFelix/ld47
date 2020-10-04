@@ -6,7 +6,7 @@ use bevy::{
 	prelude::*,
 	render::pass::ClearColor,
 };
-use map::MapPlugin;
+use map::{EntShape, MapPlugin};
 use mechanics::{
 	character::{ActiveCharacter, Character},
 	MechanicsPlugin,
@@ -41,6 +41,7 @@ fn main() {
 		})
 		.add_resource(ClearColor(Color::hex("374b6d").expect("Ha")))
 		.add_default_plugins()
+		// .add_plugin(BillboardPlugin)
 		// .add_resource(Msaa { samples: 4 })
 		.add_plugin(HelloPlugin)
 		.add_plugin(UiPlugin)
@@ -55,37 +56,26 @@ fn setup(
 	mut commands: Commands,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
+	mut textures: ResMut<Assets<Texture>>,
+	// mut billboards: ResMut<Assets<BillboardMaterial>>,
+	asset_server: Res<AssetServer>,
 ) {
 	commands
-		// .spawn(PbrComponents {
-		// 	mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-		// 	material: materials.add(Color::rgb(0.5, 0.4, 0.3).into()),
-		// 	..Default::default()
-		// })
 		.spawn(LightComponents {
 			transform: Transform::from_translation(Vec3::new(4.0, 8.0, 4.0)),
 			..Default::default()
 		})
 		.spawn(Camera2dComponents {
 			transform: Transform::new(Mat4::face_toward(
-				Vec3::new(-5.0, 4.0, -5.0),
+				Vec3::new(-2.0, 2.0, -2.0),
 				Vec3::new(0.0, 0.0, 0.0),
 				Vec3::new(0.0, 1.0, 0.0),
-			)).with_scale(1.0/50.0),
+			)).with_scale(1.0/75.0),
 			..Default::default()
 		})
-		// .spawn((World::new(),))
+		.with(mechanics::CameraFaced)
 		.spawn((map::Map::empty_of_size(10, 5),))
-		.spawn((TurnLimit(4),))
-		.spawn((
-			Character::new_split(1, 1),
-			ActiveCharacter,
-			mechanics::DisplayGridPosition(Default::default()),
-		))
-		.with_bundle(PbrComponents {
-			mesh: meshes.add(Mesh::from(shape::Cube { size: 0.25 })),
-			material: materials.add(Color::rgb(0.5, 0.4, 0.3).into()),
-			..Default::default()
-		})
-		;
+		.spawn((TurnLimit(4),));
+
+	Character::new_split(1, 1).spawn(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures)
 }

@@ -59,6 +59,48 @@ lazy_static! {
 	};
 }
 
+enum_from_primitive!{
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum EntShape {
+	Billboard = 0,
+}
+}
+
+impl EntShape {
+	pub fn mesh(self) -> Mesh {
+		match self {
+			EntShape::Billboard => Mesh::from(shape::Quad { size: (32.0/38.0, 1.0).into(), flip: false }),
+		}
+	}
+
+	pub fn existing_mesh(
+		self,
+		meshes: &mut ResMut<Assets<Mesh>>,
+	) -> Handle<Mesh> {
+		let handle = Handle::from_id(*ENT_MESH_HANDLES.get(&self)
+				.expect("Nani"));
+		let _ = meshes.get_or_insert_with(
+			handle,
+			|| Mesh::from(self.mesh()),
+		);
+
+		handle
+	}
+}
+
+lazy_static! {
+	static ref ENT_MESH_HANDLES: HashMap<EntShape, HandleId> = {
+		let mut m = HashMap::new();
+		for i in 0..u8::MAX {
+			if let Some(t) = EntShape::from_u8(i) {
+				m.insert(t, HandleId::new());
+			}
+		}
+
+		m
+	};
+}
+
 
 enum_from_primitive!{
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
@@ -72,6 +114,20 @@ impl TileShape {
 		match self {
 			TileShape::Plane => Mesh::from(shape::Plane { size: 1.0 }),
 		}
+	}
+
+	pub fn existing_mesh(
+		self,
+		meshes: &mut ResMut<Assets<Mesh>>,
+	) -> Handle<Mesh> {
+		let handle = Handle::from_id(*TILE_MESH_HANDLES.get(&self)
+				.expect("Nani"));
+		let _ = meshes.get_or_insert_with(
+			handle,
+			|| Mesh::from(self.mesh()),
+		);
+
+		handle
 	}
 }
 
@@ -144,11 +200,7 @@ impl Map {
 		for i in 0..self.len() {
 			if let Some(tile_type) = TileShape::from_u8(self.tile_shapes[i]) {
 
-				let handle = Handle::from_id(*TILE_MESH_HANDLES.get(&tile_type).expect("Nani"));
-				let _ = meshes.get_or_insert_with(
-					handle,
-					|| Mesh::from(tile_type.mesh()),
-				);
+				let handle = tile_type.existing_mesh(meshes);
 
 				let pos = GridPosition::roll(i as Ordinate, self.width);
 

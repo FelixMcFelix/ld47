@@ -2,7 +2,9 @@ use bevy::{
 	diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
 	prelude::*,
 };
-use crate::mechanics::{ActiveTurn, TurnLimit};
+use crate::{
+	mechanics::{ActiveTurn, TurnLimit},
+};
 
 #[derive(Debug, Default)]
 pub struct FpsCounter {
