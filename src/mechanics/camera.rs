@@ -4,6 +4,7 @@ use super::{
 	CameraFaced, DisplayGridPosition, GridPosition
 };
 use crate::map::Map;
+use crate::map::WORLD_HEIGHT_SCALE;
 
 use std::time::Duration;
 
@@ -115,7 +116,7 @@ impl CameraState {
 					let frac_elapsed = a.elapsed / a.duration;
 
 					height_to_add = frac_elapsed * ZOOM_EXTRA_HEIGHT;
-					y_rotation_amount = frac_elapsed * 2.0 * std::f32::consts::PI * ZOOM_OUT_ROT_COUNT;
+					y_rotation_amount = -(frac_elapsed * 2.0 * std::f32::consts::PI * ZOOM_OUT_ROT_COUNT);
 				}
 			},
 			Zoomin(a) => {
@@ -165,7 +166,7 @@ impl CameraMode {
 				},
 				_ => {},
 			}
-			
+
 			self.0 = new_state;
 		}
 	}
@@ -202,8 +203,16 @@ fn slide_camera_to_dest(
 ) {
 	let mut offset = Vec3::new(-2.0, 2.0, -2.0);
 
-	if input.pressed(KeyCode::C) && mode.allow_pan() {
-		offset[1] += 3.0;
+	if mode.allow_pan() {
+		if input.pressed(KeyCode::Z) {
+			offset = Mat3::from_rotation_y(-std::f32::consts::FRAC_PI_6).mul_vec3(offset);
+		} else if input.pressed(KeyCode::C) {
+			offset = Mat3::from_rotation_y(std::f32::consts::FRAC_PI_6).mul_vec3(offset);
+		}
+
+		if input.pressed(KeyCode::X) {
+			offset[1] += 3.0;
+		}
 	}
 
 	let (centre_offset, eye_offset, hard_set) = mode.camera_mods(offset);
@@ -212,7 +221,7 @@ fn slide_camera_to_dest(
 		for map in &mut maps.iter() {
 			for (_tag, mut tx) in &mut cameras.iter() {
 				let z_target = map.heights[dest.unroll(map.width) as usize];
-				let target = Vec3::new(-dest.y as f32, z_target as f32, dest.x as f32);
+				let target = Vec3::new(-dest.y as f32, (z_target as f32) * WORLD_HEIGHT_SCALE, dest.x as f32);
 
 				let start = tx.value();
 
@@ -225,7 +234,7 @@ fn slide_camera_to_dest(
 				let scale = if hard_set {
 					1.0
 				} else {
-					0.03
+					0.01
 				};
 
 				*tx = Transform::new(*start + scale * (target_cam - *start)).with_scale(1.0/75.0);

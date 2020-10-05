@@ -1,6 +1,7 @@
 pub mod materials;
 pub mod meta;
 
+use crate::mechanics::audio::SoundClass;
 use crate::mechanics::buttons::{
 	FireSignalOnCollide,
 	OccupySpaceUntilSignal,
@@ -13,6 +14,7 @@ use crate::mechanics::{
 	spawner::Spawner,
 	ActiveTurn,
 	Alive,
+	Direction,
 	DisplayGridPosition,
 	GhostLimit,
 	GridPosition,
@@ -31,6 +33,8 @@ use materials::AnimatedMaterial;
 use self::meta::Levels;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+pub const WORLD_HEIGHT_SCALE: f32 = 0.5;
 
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum TileHeight {
@@ -62,6 +66,20 @@ impl TileHeight {
 		match self {
 			TileHeight::Impassable(a) => a,
 			TileHeight::Passable(a) => a,
+		}
+	}
+}
+
+fn mesh_flip_uv(in_mesh: &mut Mesh) {
+	for attr_block in in_mesh.attributes.iter_mut() {
+		if attr_block.name == VertexAttribute::UV {
+			use VertexAttributeValues::*;
+			match &mut attr_block.values {
+				Float2(fs) => {
+					fs[..].reverse();
+				},
+				_ => {},
+			}
 		}
 	}
 }
@@ -101,6 +119,8 @@ impl EntShape {
 						}
 					}
 				}
+
+				mesh_flip_uv(&mut m);
 
 				m
 			},
@@ -150,24 +170,25 @@ impl EntData {
 	pub fn create(
 		&self,
 		pos: GridPosition,
+		rot: Direction,
 		comms: &mut Commands,
 		mut meshes: &mut ResMut<Assets<Mesh>>,
 		materials: &mut ResMut<Assets<StandardMaterial>>,
 		asset_server: &Res<AssetServer>,
-		mut textures: &mut ResMut<Assets<Texture>>,
+		textures: &mut ResMut<Assets<Texture>>,
 	) {
+		let (material, anim) = match self.anim().handles(asset_server, textures, materials) {
+			TexVariety::Unanim(mat) => (mat, None),
+			TexVariety::Anim(mat) => (mat.first().unwrap(), Some(mat)),
+		};
+
+		// let transform = Transform::from_rotation(Quat::from_rotation_x(std::f32::consts::PI));
+		let transform = Transform::from_rotation(
+			Quat::from_rotation_y(rot.angle())
+			);
+
 		match self {
 			EntData::Start => {
-				let texture_handle = asset_server
-					.load_sync(&mut textures, "assets/placeholder/start.png")
-					.unwrap();
-
-				let material = materials.add(StandardMaterial {
-					albedo_texture: Some(texture_handle),
-					shaded: false,
-					..Default::default()
-				});
-
 				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
 
 				comms.spawn((
@@ -177,6 +198,7 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						transform,
 						draw: Draw {
 							is_transparent: true,
 							..Default::default()
@@ -185,16 +207,6 @@ impl EntData {
 					});
 			},
 			EntData::End => {
-				let texture_handle = asset_server
-					.load_sync(&mut textures, "assets/placeholder/end.png")
-					.unwrap();
-
-				let material = materials.add(StandardMaterial {
-					albedo_texture: Some(texture_handle),
-					shaded: false,
-					..Default::default()
-				});
-
 				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
 
 				comms.spawn((
@@ -204,6 +216,7 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						transform,
 						draw: Draw {
 							is_transparent: true,
 							..Default::default()
@@ -212,16 +225,6 @@ impl EntData {
 					});
 			},
 			EntData::Button(data) => {
-				let texture_handle = asset_server
-					.load_sync(&mut textures, "assets/placeholder/button.png")
-					.unwrap();
-
-				let material = materials.add(StandardMaterial {
-					albedo_texture: Some(texture_handle),
-					shaded: false,
-					..Default::default()
-				});
-
 				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
 
 				comms.spawn((
@@ -232,6 +235,7 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						transform,
 						draw: Draw {
 							is_transparent: true,
 							..Default::default()
@@ -240,16 +244,6 @@ impl EntData {
 					});
 			},
 			EntData::Door(data) => {
-				let texture_handle = asset_server
-					.load_sync(&mut textures, "assets/placeholder/door.png")
-					.unwrap();
-
-				let material = materials.add(StandardMaterial {
-					albedo_texture: Some(texture_handle),
-					shaded: false,
-					..Default::default()
-				});
-
 				let mesh = EntShape::BoostSquare.existing_mesh(&mut meshes);
 
 				comms.spawn((
@@ -259,6 +253,7 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						transform,
 						draw: Draw {
 							is_transparent: true,
 							..Default::default()
@@ -269,6 +264,19 @@ impl EntData {
 		}
 
 		comms.with(Alive::default());
+
+		if let Some(anim) = anim {
+			comms.with(anim);
+		}
+	}
+
+	pub fn anim(&self) -> EntAnim {
+		match self {
+			EntData::Start => EntAnim::Start,
+			EntData::End => EntAnim::End,
+			EntData::Button(_) => EntAnim::Button,
+			EntData::Door(_) => EntAnim::Door,
+		}
 	}
 }
 
@@ -282,14 +290,43 @@ enum_from_primitive!{
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum TileShape {
 	Plane = 0,
+	Slope
 }
 }
 
 impl TileShape {
 	pub fn mesh(self) -> Mesh {
-		match self {
+		let mut m = match self {
 			TileShape::Plane => Mesh::from(shape::Plane { size: 1.0 }),
-		}
+			TileShape::Slope => {
+				let mut m = Mesh::from(shape::Plane { size: 1.0 });
+
+				for attr_block in m.attributes.iter_mut() {
+					if attr_block.name == VertexAttribute::POSITION {
+						use VertexAttributeValues::*;
+						match &mut attr_block.values {
+							Float3(ref mut v) => {
+								for val_set in v.iter_mut().take(2) {
+									val_set[1] += 1.0;
+								}
+							},
+							Float4(ref mut v) => {
+								for val_set in v.iter_mut().take(2) {
+									val_set[1] += 1.0;
+								}
+							},
+							_ => {}
+						}
+					}
+				}
+
+				m
+			},
+		};
+
+		mesh_flip_uv(&mut m);
+
+		m
 	}
 
 	pub fn existing_mesh(
@@ -377,6 +414,19 @@ pub enum TileTexture {
 	Good = 0,
 	Bad,
 	Bad2,
+	SlopeDrop,
+	Sand,
+
+	Up,
+	Left,
+	Right,
+	Down,
+	Block,
+
+	LeftBlock,
+	RightBlock,
+	GemWall,
+	StdWall,
 }
 }
 
@@ -389,26 +439,121 @@ impl TileTexture {
 	) -> TexVariety {
 		let (fps, res) = match self {
 			TileTexture::Good => (0.0, &[
-				"assets/placeholder/good.png",
+				"assets/tiles/ground_01.png",
 			][..]),
 			TileTexture::Bad => (0.0, &[
-				"assets/placeholder/bad.png",
+				"assets/tiles/ground_00.png",
 			][..]),
 			TileTexture::Bad2 => (3.0, &[
 				"assets/placeholder/bad2.png",
 				"assets/placeholder/bad22.png",
+			][..]),
+			TileTexture::SlopeDrop => (0.0, &[
+				"assets/tiles/ground_02.png",
+			][..]),
+			TileTexture::Sand => (0.0, &[
+				"assets/tiles/ground_03.png",
+			][..]),
+			TileTexture::Up => (0.0, &[
+				"assets/tiles/ground_04.png",
+			][..]),
+			TileTexture::Left => (0.0, &[
+				"assets/tiles/ground_05.png",
+			][..]),
+			TileTexture::Right => (0.0, &[
+				"assets/tiles/ground_06.png",
+			][..]),
+			TileTexture::Down => (0.0, &[
+				"assets/tiles/ground_07.png",
+			][..]),
+			TileTexture::Block => (0.0, &[
+				"assets/tiles/ground_08.png",
+			][..]),
+			TileTexture::LeftBlock => (0.0, &[
+				"assets/tiles/ground_09.png",
+			][..]),
+			TileTexture::RightBlock => (0.0, &[
+				"assets/tiles/ground_10.png",
+			][..]),
+			TileTexture::GemWall => (0.0, &[
+				"assets/tiles/ground_11.png",
+			][..]),
+			TileTexture::StdWall => (0.0, &[
+				"assets/tiles/ground_12.png",
 			][..]),
 		};
 
 		TexVariety::from_asset_list(fps, res, asset_server, textures, materials)
 	}
 
+	pub fn sound_class(self) -> SoundClass {
+		use TileTexture::*;
+		match self {
+			Good | Sand => SoundClass::Sand,
+			Up | Left | Right | Down | Block | LeftBlock | RightBlock => SoundClass::Stone,
+			_ => SoundClass::Na,
+		}
+	}
+}
+
+enum_from_primitive!{
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum EntAnim {
+	Start,
+	End,
+	Button,
+	ButtonGone,
+	Door,
+	Char,
+}
+}
+
+impl EntAnim {
+	pub fn handles(
+		self,
+		asset_server: &AssetServer,
+		textures: &mut Assets<Texture>,
+		materials: &mut Assets<StandardMaterial>,
+	) -> TexVariety {
+		let (fps, res) = match self {
+			EntAnim::Start => (0.0, &[
+				"assets/tiles/ground_14.png",
+			][..]),
+			EntAnim::End => (0.0, &[
+				"assets/tiles/ground_13.png",
+			][..]),
+			EntAnim::Button => (0.0, &[
+				"assets/tiles/ground_15.png",
+			][..]),
+			EntAnim::Door => (0.0, &[
+				"assets/tiles/ground_11.png",
+			][..]),
+			EntAnim::ButtonGone => (0.0, &[
+				"assets/tiles/ground_14.png",
+			][..]),
+			EntAnim::Char => (3.0, &[
+				"assets/char/char1.png",
+				"assets/char/char2.png",
+			][..]),
+		};
+
+		TexVariety::from_asset_list(fps, res, asset_server, textures, materials)
+	}
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct EntBlueprint {
 	pos: GridPosition,
 	data: EntData,
+	rot: Option<Direction>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
+pub struct Wall {
+	pos: GridPosition,
+	h: f32,
+	texture: u8,
+	rot: Option<Direction>,
 }
 
 #[derive(Clone, Properties, Debug, Default, Deserialize, Serialize)]
@@ -421,6 +566,8 @@ pub struct Map {
 	pub tiles: Vec<u8>,
 	/// Shape to apply to tile.
 	pub tile_shapes: Vec<u8>,
+	/// Shape to apply to tile.
+	pub tile_rots: Vec<u8>,
 	/// Height (and passability) of each tile.
 	pub heights: Vec<isize>,
 
@@ -428,6 +575,8 @@ pub struct Map {
 	pub created: bool,
 
 	pub ents: Option<Vec<EntBlueprint>>,
+
+	pub walls: Option<Vec<Wall>>,
 
 	pub turn_limit: TurnLimit,
 
@@ -450,13 +599,16 @@ impl Map {
 			tiles: vec![Default::default(); els],
 			tile_shapes: vec![Default::default(); els],
 			heights: vec![Default::default(); els],
+			tile_rots: vec![Default::default(); els],
 			created: false,
 			ents: Some(vec![
 				EntBlueprint{
 					pos: GridPosition{ x:0, y:0 },
 					data: EntData::Start,
+					rot: None,
 				},
 			]),
+			walls: None,
 			turn_limit: TurnLimit(7),
 			ghost_limit: Some(GhostLimit(1)),
 		}
@@ -495,7 +647,8 @@ impl Map {
 	) {
 		for i in 0..self.len() {
 			let maybe_tex = TileTexture::from_u8(self.tiles[i]);
-			if let Some((tile_type, tex_type)) = TileShape::from_u8(self.tile_shapes[i]).zip(maybe_tex) {
+			let maybe_rot = Direction::from_u8(self.tile_rots[i]).map(|m| m.angle());
+			if let Some(((tile_type, tex_type), angle)) = TileShape::from_u8(self.tile_shapes[i]).zip(maybe_tex).zip(maybe_rot) {
 
 				let handle = tile_type.existing_mesh(meshes);
 
@@ -512,14 +665,59 @@ impl Map {
 					mesh: handle,
 					material,
 					transform: Transform::from_translation(
-						Vec3::new(-pos.x as f32, height as f32, pos.y as f32)
-					),
+						Vec3::new(-pos.x as f32, (height as f32) * WORLD_HEIGHT_SCALE, pos.y as f32)
+					).with_non_uniform_scale(Vec3::new(1.0, WORLD_HEIGHT_SCALE, -1.0))
+					.with_rotation(Quat::from_rotation_y(angle)),
 					..Default::default()
 				}).with(WorldGeometry)
 				.with(Alive::default());
 
 				if let Some(anim) = anim {
 					world.with(anim);
+				}
+			}
+		}
+
+		if let Some(ref walls) = self.walls {
+			for wall in walls.iter() {
+
+				println!("{:?}", wall);
+
+				// let i = wall.pos.unroll(self.width) as usize;
+				let maybe_rot = wall.rot;
+				if let Some((tex_type, dir)) = TileTexture::from_u8(wall.texture).zip(maybe_rot) {
+					let angle = dir.angle();
+					let mesh = meshes.add(Mesh::from(shape::Quad { size: (1.0, 1.0).into(), flip: true }));
+
+					let pos = wall.pos;
+
+					let height = wall.h;
+
+					let (material, anim) = match tex_type.handles(asset_server, textures, materials) {
+						TexVariety::Unanim(mat) => (mat, None),
+						TexVariety::Anim(mat) => (mat.first().unwrap(), Some(mat)),
+					};
+
+					let (x_adj, y_adj) = match dir {
+						Direction::North => (0.0, -0.5),
+						Direction::South => (0.5, 0.0),
+						_ => (0.0, 0.0),
+					};
+
+					world.spawn(PbrComponents {
+						mesh,
+						material,
+						transform: Transform::from_translation(
+							Vec3::new(-pos.y as f32 + x_adj, (height as f32) * WORLD_HEIGHT_SCALE, pos.x as f32 + y_adj)
+						).with_non_uniform_scale(Vec3::new(1.0, WORLD_HEIGHT_SCALE, 1.0))
+						.with_rotation(Quat::from_rotation_y(angle)),
+						..Default::default()
+					}).with(WorldGeometry)
+					.with(Alive::default());
+
+					if let Some(anim) = anim {
+						world.with(anim);
+					}
 				}
 			}
 		}
@@ -546,7 +744,8 @@ impl Map {
 	) {
 		if let Some(ents) = &self.ents {
 			for blueprint in ents {
-				blueprint.data.create(blueprint.pos, world, meshes, materials, asset_server, textures)
+				let rot = blueprint.rot.unwrap_or_default();
+				blueprint.data.create(blueprint.pos, rot, world, meshes, materials, asset_server, textures)
 			}
 		}
 	}
@@ -593,6 +792,11 @@ fn map_creator(
 	if was_empty {
 		turn.reinit();
 		signals.reinit();
-		commands.spawn((level_info.load_current(),Alive::default()));
+
+		if level_info.start_at >= level_info.data.len() {
+
+		} else {
+			commands.spawn((level_info.load_current(),Alive::default()));
+		}
 	}
 }

@@ -2,13 +2,20 @@
     width: 5,
     height: 5,
     tiles: [
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
-        0,0,0,0,0,
+        1,1,10,1,1,
+        10,10,10,1,1,
+        10,10,10,10,10,
+        1,1,10,10,10,
+        0,0,10,0,0,
     ],
     tile_shapes: [
+        1,1,0,0,0,
+        0,0,0,1,1,
+        0,0,0,0,0,
+        0,0,0,0,0,
+        0,0,1,0,0,
+    ],
+    tile_rots: [
         0,0,0,0,0,
         0,0,0,0,0,
         0,0,0,0,0,
@@ -37,6 +44,458 @@
                 x: 2,
                 y: 0,
             ),
+        ),
+    ]),
+    walls: Some([
+        (
+            pos: (x: 0, y:3),
+            h: 0.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:3),
+            h: 1.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:3),
+            h: 2.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:3),
+            h: 3.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:3),
+            h: 4.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:3),
+            h: 5.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 1, y:3),
+            h: 0.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:3),
+            h: 1.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:3),
+            h: 2.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:3),
+            h: 3.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:3),
+            h: 4.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:3),
+            h: 5.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 2, y:3),
+            h: 0.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 2, y:3),
+            h: 1.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 2, y:3),
+            h: 2.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 2, y:3),
+            h: 3.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 2, y:3),
+            h: 4.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 3, y:3),
+            h: 0.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:3),
+            h: 1.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:3),
+            h: 2.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:3),
+            h: 3.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:3),
+            h: 4.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 2, y:3),
+            h: 0.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+        (
+            pos: (x: 2, y:3),
+            h: 1.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+        (
+            pos: (x: 2, y:3),
+            h: 2.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+
+        //
+        (
+            pos: (x: 2, y:4),
+            h: 0.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+        (
+            pos: (x: 2, y:4),
+            h: 1.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+        (
+            pos: (x: 2, y:4),
+            h: 2.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+
+        //
+        (
+            pos: (x: 3, y:4),
+            h: 0.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:4),
+            h: 1.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:4),
+            h: 2.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 4, y:4),
+            h: 0.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:4),
+            h: 1.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:4),
+            h: 2.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:4),
+            h: 3.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 2, y:5),
+            h: 0.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 2, y:5),
+            h: 1.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 4, y:3),
+            h: 3.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+
+        //
+        (
+            pos: (x: 0, y:2),
+            h: 6.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 1, y:2),
+            h: 6.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:2),
+            h: 7.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 2, y:2),
+            h: 5.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 2, y:2),
+            h: 6.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 2, y:2),
+            h: 7.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 3, y:2),
+            h: 5.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:2),
+            h: 6.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 4, y:2),
+            h: 4.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:2),
+            h: 5.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:2),
+            h: 6.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 1, y:1),
+            h: 7.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+
+        //
+        (
+            pos: (x: 2, y:1),
+            h: 8.5,
+            texture: 13,
+            rot: Some(North),
+        ),
+
+        //
+        (
+            pos: (x: 2, y:2),
+            h: 8.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 0, y:1),
+            h: 7.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:1),
+            h: 8.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:1),
+            h: 9.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 0, y:1),
+            h: 10.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 1, y:1),
+            h: 7.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:1),
+            h: 8.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:1),
+            h: 9.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 1, y:1),
+            h: 10.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 3, y:1),
+            h: 7.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:1),
+            h: 8.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:1),
+            h: 9.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 3, y:1),
+            h: 10.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+
+        //
+        (
+            pos: (x: 4, y:1),
+            h: 7.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:1),
+            h: 8.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:1),
+            h: 9.5,
+            texture: 13,
+            rot: Some(South),
+        ),
+        (
+            pos: (x: 4, y:1),
+            h: 10.5,
+            texture: 13,
+            rot: Some(South),
         ),
     ]),
     turn_limit: (13),

@@ -4,8 +4,10 @@ use std::collections::HashMap;
 use crate::map::Map;
 
 use super::CollideGridPosition;
+use super::DisplayGridPosition;
 use super::GridPosition;
 use super::OccupationMap;
+use super::audio::SoundClass;
 
 pub struct ButtonPlugin;
 
@@ -130,18 +132,24 @@ fn block_until_signal(
 	mut commands: Commands,
 	signals: ResMut<SignalCounter>,
 	mut collisions: ResMut<OccupationMap>,
+	mut evts: ResMut<Events<SoundClass>>,
 	mut maps: Query<&Map>,
-	mut query: Query<(Entity, &mut OccupySpaceUntilSignal)>,
+	mut query: Query<(Entity, &mut OccupySpaceUntilSignal, &mut Transform)>,
 ) {
 	for map in &mut maps.iter() {
-		for (ent, mut collide_data) in &mut query.iter() {
+		for (ent, mut collide_data, mut tx) in &mut query.iter() {
 			let pos = collide_data.pos.unroll(map.width) as usize;
 			let cond_met = signals.signal_met(collide_data.signal);
 			if cond_met != collide_data.last_collide {
 				if cond_met {
 					commands.remove_one::<CollideGridPosition>(ent);
+					commands.remove_one::<DisplayGridPosition>(ent);
+
+					tx.set_translation(Vec3::new(-22.0, -22.0, -22.0));
+					evts.send(SoundClass::Button);
 				} else {
 					commands.insert_one(ent, CollideGridPosition(collide_data.pos));
+					commands.insert_one(ent, DisplayGridPosition(collide_data.pos));
 				}
 
 				collide_data.last_collide = cond_met;

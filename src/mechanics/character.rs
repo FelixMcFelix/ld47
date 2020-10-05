@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use super::Alive;
 use super::GhostLimit;
+use super::audio::SoundClass;
+use super::audio::StepEvent;
 use super::{
 	ActiveTurn,
 	CameraFacer,
@@ -12,7 +14,7 @@ use super::{
 	Ordinate,
 	TurnLimit,
 };
-use crate::map::{EntShape, Map};
+use crate::map::{EntAnim, EntShape, Map, TexVariety};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CharacterCommand {
@@ -44,19 +46,23 @@ impl Character {
 		Self::new(GridPosition{ x, y })
 	}
 
-	pub fn do_action(&mut self, action: CharacterCommand, map: &Map, colliders: &mut OccupationMap) {
+	pub fn do_action(&mut self, action: CharacterCommand, map: &Map, colliders: &mut OccupationMap) -> Option<GridPosition> {
 		let supposed_dest = self.current.destination(action);
 
 		println!("{:?} -> {:?}", action, supposed_dest);
-		let normalised = supposed_dest.clamp(map.width, map.height).unroll(map.width) as usize;
+		let modif = supposed_dest.clamp(map.width, map.height);
+		let normalised = modif.unroll(map.width) as usize;
 
 		if map.move_allowed_by_terrain(&self.current, &supposed_dest) && !colliders.0[normalised] {
 			let form_norm = self.current.clamp(map.width, map.height).unroll(map.width) as usize;
 			colliders.move_collider(form_norm, normalised);
 			self.current = supposed_dest;
 			println!("moved to {:?}", supposed_dest);
+
+			Some(modif)
 		} else {
-			println!("move blocked")
+			println!("move blocked");
+			None
 		}
 	}
 
@@ -86,17 +92,24 @@ impl Character {
 		mut meshes: &mut ResMut<Assets<Mesh>>,
 		materials: &mut ResMut<Assets<StandardMaterial>>,
 		asset_server: &Res<AssetServer>,
-		mut textures: &mut ResMut<Assets<Texture>>,
+		textures: &mut ResMut<Assets<Texture>>,
 	) {
-		let texture_handle = asset_server
-			.load_sync(&mut textures, "assets/placeholder/ramza.png")
-			.unwrap();
+		// let texture_handle = asset_server
+		// 	.load_sync(&mut textures, "assets/placeholder/ramza.png")
+		// 	.unwrap();
 
-		let material = materials.add(StandardMaterial {
-			albedo_texture: Some(texture_handle),
-			shaded: false,
-			..Default::default()
-		});
+		let anim = EntAnim::Char;
+
+		// let material = materials.add(StandardMaterial {
+		// 	albedo_texture: Some(texture_handle),
+		// 	shaded: false,
+		// 	..Default::default()
+		// });
+
+		let (material, anim) = match anim.handles(asset_server, textures, materials) {
+			TexVariety::Unanim(mat) => (mat, None),
+			TexVariety::Anim(mat) => (mat.first().unwrap(), Some(mat)),
+		};
 
 		let pos = self.current;
 
@@ -119,6 +132,10 @@ impl Character {
 				},
 				..Default::default()
 			});
+
+		if let Some(anim) = anim {
+			comms.with(anim);
+		}
 	}
 }
 
@@ -143,6 +160,8 @@ fn char_control(
 	mut occupation: ResMut<OccupationMap>,
 	mut turn: ResMut<ActiveTurn>,
 	key_input: Res<Input<KeyCode>>,
+	mut evts: ResMut<Events<StepEvent>>,
+	mut sound_evts: ResMut<Events<SoundClass>>,
 	mut map_query: Query<&Map>,
 	mut query: Query<(&mut Character, &ActiveCharacter)>,
 ) {
@@ -177,7 +196,11 @@ fn char_control(
 					// ALWAYS push action regardless of whether or not it is doable.
 					character.command_list.push(action);
 
-					character.do_action(action, map, &mut occupation);
+					if let Some(pos) = character.do_action(action, map, &mut occupation) {
+						evts.send(StepEvent(pos));
+					} else {
+						sound_evts.send(SoundClass::Blocked);
+					}
 
 					turn.march_turn();
 				}

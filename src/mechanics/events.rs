@@ -5,6 +5,7 @@ use crate::map::meta::Levels;
 
 use super::Alive;
 use super::camera::CameraMode;
+use super::audio::StepEvent;
 use super::ender::trigger_restart;
 
 pub struct EventPlugin;
@@ -71,6 +72,8 @@ fn handle_dolevelgen(
 		if let Some(level) = levels.data.get(levels.start_at) {
 			let romanify: Roman = (levels.start_at as i16 + 1).into();
 			textevts.send(SpawnLevelText(format!("{:X}: {}", romanify, level.name)));
+		} else {
+			textevts.send(SpawnLevelText("Congratulations! You win!".into()));
 		}
 	}
 }

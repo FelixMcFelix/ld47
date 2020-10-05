@@ -1745,6 +1745,7 @@ dependencies = [
  "enum_primitive",
  "lazy_static",
  "numerals",
+ "rand",
  "ron",
  "serde",
 ]

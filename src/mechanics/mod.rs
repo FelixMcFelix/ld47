@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod buttons;
 pub mod camera;
 pub mod character;
@@ -7,18 +8,34 @@ pub mod events;
 pub mod spawner;
 
 use bevy::prelude::*;
+use enum_primitive::*;
 
 use camera::CameraPlugin;
 use character::CharacterCommand;
 use crate::map::Map;
+use crate::map::WORLD_HEIGHT_SCALE;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum_from_primitive!{
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize, Serialize)]
 pub enum Direction {
 	North,
 	East,
 	South,
 	West,
+}
+}
+
+impl Direction {
+	pub fn angle(self) -> f32 {
+		std::f32::consts::FRAC_PI_4 * (self as u8 as f32)
+	}
+}
+
+impl Default for Direction {
+	fn default() -> Self {
+	    Direction::North
+	}
 }
 
 pub type Ordinate = isize;
@@ -130,6 +147,7 @@ impl Plugin for MechanicsPlugin {
 	fn build(&self, app: &mut AppBuilder) {
 		app.add_plugin(RenderPlugin)
 			.add_plugin(events::EventPlugin)
+			.add_plugin(audio::AudioPlugin)
 			.add_plugin(CameraPlugin)
 			.add_resource(OccupationMap::default())
 			.add_system(collision_populater.system())
@@ -225,7 +243,7 @@ fn display_pos_to_world(
 			let height = map.heights[pos.unroll(map.width) as usize];
 			transform.set_translation(Vec3::new(
 				-pos.y as f32,
-				height as f32 + 0.5,
+				(height as f32) * WORLD_HEIGHT_SCALE + 0.5,
 				pos.x as f32,
 			));
 		}

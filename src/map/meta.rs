@@ -47,9 +47,9 @@ impl Levels {
 			.expect("Write failed");
 	}
 
-	pub fn load_next(&mut self) -> Map {
+	pub fn load_next(&mut self) {
 		self.start_at += 1;
-		self.load_current()
+		// self.load_current()
 	}
 
 	pub fn load_current(&self) -> Map {

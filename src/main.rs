@@ -43,7 +43,7 @@ fn main() {
 			title: "LD47: Stuck in a Loop".to_string(),
 			..Default::default()
 		})
-		.add_resource(ClearColor(Color::hex("374b6d").expect("Ha")))
+		.add_resource(ClearColor(Color::hex("341c27").expect("Ha")))
 		.add_default_plugins()
 		.add_resource(map::meta::Levels::get_self())
 		// .add_plugin(BillboardPlugin)
