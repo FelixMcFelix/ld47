@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::map::{Map, TileTexture};
 
 use bevy::prelude::*;
@@ -15,8 +17,36 @@ impl Plugin for AudioPlugin {
 	fn build(&self, app: &mut AppBuilder) {
 		app.add_event::<StepEvent>()
 			.add_event::<SoundClass>()
+			.add_resource(MusicTimer::new())
 			.add_system(handle_footstep.system())
-			.add_system(handle_sound.system());
+			.add_system(handle_sound.system())
+			.add_system(music.system());
+	}
+}
+
+pub struct MusicTimer(Timer, bool);
+
+impl MusicTimer {
+	pub fn new() -> Self {
+		// Song is exactly 16s long.
+		Self(Timer::new(Duration::from_secs(16), true), false)
+	}
+}
+
+fn music(
+	time: Res<Time>,
+	mut player: ResMut<MusicTimer>,
+	asset_server: Res<AssetServer>,
+	audio_out: Res<AudioOutput>,
+) {
+	player.0.tick(time.delta_seconds);
+
+	if player.0.finished || !player.1 {
+		let handle = asset_server.load("assets/music/NoName.mp3")
+			.unwrap();
+
+		audio_out.play(handle);
+		player.1 = true;
 	}
 }
 

@@ -686,7 +686,7 @@ impl Map {
 		if let Some(ref walls) = self.walls {
 			for wall in walls.iter() {
 
-				println!("{:?}", wall);
+				// println!("{:?}", wall);
 
 				// let i = wall.pos.unroll(self.width) as usize;
 				let maybe_rot = wall.rot;
