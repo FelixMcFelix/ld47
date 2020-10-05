@@ -1,3 +1,4 @@
+pub mod materials;
 pub mod meta;
 
 use crate::mechanics::buttons::{
@@ -26,6 +27,7 @@ use bevy::{
 };
 use enum_primitive::*;
 use lazy_static::lazy_static;
+use materials::AnimatedMaterial;
 use self::meta::Levels;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -62,19 +64,6 @@ impl TileHeight {
 			TileHeight::Passable(a) => a,
 		}
 	}
-}
-
-lazy_static! {
-	static ref TILE_MESH_HANDLES: HashMap<TileShape, HandleId> = {
-		let mut m = HashMap::new();
-		for i in 0..u8::MAX {
-			if let Some(t) = TileShape::from_u8(i) {
-				m.insert(t, HandleId::new());
-			}
-		}
-
-		m
-	};
 }
 
 enum_from_primitive!{
@@ -318,6 +307,104 @@ impl TileShape {
 	}
 }
 
+lazy_static! {
+	static ref TILE_MESH_HANDLES: HashMap<TileShape, HandleId> = {
+		let mut m = HashMap::new();
+		for i in 0..u8::MAX {
+			if let Some(t) = TileShape::from_u8(i) {
+				m.insert(t, HandleId::new());
+			}
+		}
+
+		m
+	};
+}
+
+pub enum TexVariety {
+	Unanim(Handle<StandardMaterial>),
+	Anim(AnimatedMaterial),
+}
+
+impl TexVariety {
+	fn from_asset_list(
+		fps: f32,
+		strs: &[&str],
+		asset_server: &AssetServer,
+		mut textures: &mut Assets<Texture>,
+		materials: &mut Assets<StandardMaterial>,
+	) -> Self {
+		match strs.len() {
+			1 => {
+				let texture_handle = asset_server
+					.load_sync(&mut textures, strs[0])
+					.unwrap();
+
+				let material = materials.add(StandardMaterial {
+					albedo_texture: Some(texture_handle),
+					shaded: false,
+					..Default::default()
+				});
+
+				TexVariety::Unanim(material)
+			},
+			a if a > 1 => {
+				let mut handles = vec![];
+
+				for i in 0..a {
+					let texture_handle = asset_server
+						.load_sync(&mut textures, strs[i])
+						.unwrap();
+
+					let material = materials.add(StandardMaterial {
+						albedo_texture: Some(texture_handle),
+						shaded: false,
+						..Default::default()
+					});
+
+					handles.push(material);
+				}
+
+				TexVariety::Anim(AnimatedMaterial::new(fps, handles))
+			},
+			_ => unimplemented!(),
+		}
+	}
+}
+
+enum_from_primitive!{
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+pub enum TileTexture {
+	Good = 0,
+	Bad,
+	Bad2,
+}
+}
+
+impl TileTexture {
+	pub fn handles(
+		self,
+		asset_server: &AssetServer,
+		textures: &mut Assets<Texture>,
+		materials: &mut Assets<StandardMaterial>,
+	) -> TexVariety {
+		let (fps, res) = match self {
+			TileTexture::Good => (0.0, &[
+				"assets/placeholder/good.png",
+			][..]),
+			TileTexture::Bad => (0.0, &[
+				"assets/placeholder/bad.png",
+			][..]),
+			TileTexture::Bad2 => (3.0, &[
+				"assets/placeholder/bad2.png",
+				"assets/placeholder/bad22.png",
+			][..]),
+		};
+
+		TexVariety::from_asset_list(fps, res, asset_server, textures, materials)
+	}
+
+}
+
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct EntBlueprint {
 	pos: GridPosition,
@@ -403,9 +490,12 @@ impl Map {
 		world: &mut Commands,
 		meshes: &mut ResMut<Assets<Mesh>>,
 		materials: &mut ResMut<Assets<StandardMaterial>>,
+		asset_server: &AssetServer,
+		textures: &mut Assets<Texture>,
 	) {
 		for i in 0..self.len() {
-			if let Some(tile_type) = TileShape::from_u8(self.tile_shapes[i]) {
+			let maybe_tex = TileTexture::from_u8(self.tiles[i]);
+			if let Some((tile_type, tex_type)) = TileShape::from_u8(self.tile_shapes[i]).zip(maybe_tex) {
 
 				let handle = tile_type.existing_mesh(meshes);
 
@@ -413,15 +503,24 @@ impl Map {
 
 				let height = TileHeight::from(self.heights[i]).to_raw_height();
 
+				let (material, anim) = match tex_type.handles(asset_server, textures, materials) {
+					TexVariety::Unanim(mat) => (mat, None),
+					TexVariety::Anim(mat) => (mat.first().unwrap(), Some(mat)),
+				};
+
 				world.spawn(PbrComponents {
 					mesh: handle,
-					material: materials.add(Color::rgb(0.5 * (pos.x as f32 / 5.0), 0.4 * (pos.y as f32 / 5.0), 0.3).into()),
+					material,
 					transform: Transform::from_translation(
 						Vec3::new(-pos.x as f32, height as f32, pos.y as f32)
 					),
 					..Default::default()
 				}).with(WorldGeometry)
 				.with(Alive::default());
+
+				if let Some(anim) = anim {
+					world.with(anim);
+				}
 			}
 		}
 	}
@@ -460,6 +559,7 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
 	fn build(&self, app: &mut AppBuilder) {
 		app
+			.add_plugin(materials::MaterialPlugin)
 			.add_system(map_creator.system());
 	}
 }
@@ -480,7 +580,7 @@ fn map_creator(
 	for mut map in &mut query.iter() {
 		if !map.created {
 			println!("I am creating this map");
-			map.create_geometry(&mut commands, &mut meshes, &mut materials);
+			map.create_geometry(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures);
 			map.create_limits(&mut commands);
 			map.create_entities(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures);
 			map.created = true;
