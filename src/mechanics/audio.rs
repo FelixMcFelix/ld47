@@ -45,6 +45,10 @@ fn music(
 		let handle = asset_server.load("assets/music/NoName.mp3")
 			.unwrap();
 
+		if !player.1 {
+			player.0.reset();
+		}
+
 		audio_out.play(handle);
 		player.1 = true;
 	}
