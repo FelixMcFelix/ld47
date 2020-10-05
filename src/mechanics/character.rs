@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use super::Alive;
+use super::GhostLimit;
 use super::{
 	ActiveTurn,
 	CameraFacer,
@@ -219,6 +220,7 @@ fn char_set_collision(
 fn char_reset(
 	mut commands: Commands,
 	limit: Res<TurnLimit>,
+	mut ghosts: ResMut<GhostLimit>,
 	mut turn: ResMut<ActiveTurn>,
 	mut meshes: ResMut<Assets<Mesh>>,
 	mut materials: ResMut<Assets<StandardMaterial>>,
@@ -227,7 +229,7 @@ fn char_reset(
 	mut actives_query: Query<(Entity, &mut Character, &ActiveCharacter)>,
 	mut inactives_query: Query<(&mut Character, &InactiveCharacter)>,
 ) {
-	if turn.should_reset(limit.0) {
+	if turn.should_reset(limit.0) && ghosts.0 != 0 {
 		for (ent, mut character, _active_char) in &mut actives_query.iter() {
 			commands.remove_one::<ActiveCharacter>(ent);
 			commands.insert_one(ent, InactiveCharacter);
@@ -244,5 +246,6 @@ fn char_reset(
 		}
 
 		turn.reset_and_add_ent();
+		ghosts.0 -= 1;
 	}
 }

@@ -137,7 +137,8 @@ impl Plugin for MechanicsPlugin {
 			.add_plugin(ender::EnderPlugin)
 			.add_plugin(buttons::ButtonPlugin)
 			.add_system(camera_facer.system())
-			.add_resource(TurnLimit(7))
+			.add_resource(TurnLimit(1))
+			.add_resource(GhostLimit(1))
 			.add_resource(ActiveTurn::default())
 			.add_system(turn_lockout.system());
 	}

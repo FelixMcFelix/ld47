@@ -2,6 +2,7 @@ use bevy::{
 	diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
 	prelude::*,
 };
+use crate::mechanics::GhostLimit;
 use crate::{
 	mechanics::{ActiveTurn, TurnLimit},
 };
@@ -50,9 +51,39 @@ fn turn_system(
 	turn: Res<ActiveTurn>,
 	mut query: Query<(&TurnCounter, &mut Text)>,
 ) {
+	let target_turn = turn.turn + 1;
 	for (_ctl, mut text) in &mut query.iter() {
-		text.value = format!("{}/{}", turn.turn + 1, limit.0);
+		text.value = format!("{}/{}", target_turn.min(limit.0), limit.0);
 	}
+}
+
+
+#[derive(Debug, Default)]
+pub struct GhostCounter;
+
+#[derive(Debug, Default)]
+pub struct TopLevel;
+
+fn reruns_system(
+	limit: Res<GhostLimit>,
+	mut query: Query<(&GhostCounter, &mut Text)>,
+) {
+	for (_ctl, mut text) in &mut query.iter() {
+		text.value = format!("{}", limit.0);
+	}	
+}
+
+fn reruns_recolour_system(
+	limit: Res<GhostLimit>,
+	mut query: Query<(&GhostCounter, &TopLevel, &mut Text)>,
+) {
+	for (_ctl, _tag, mut text) in &mut query.iter() {
+		text.style.color = match limit.0 {
+			0 => Color::RED,
+			1 => Color::rgb(1.0, 0.5, 0.0),
+			_ => Color::WHITE,
+		};
+	}	
 }
 
 pub fn setup(
@@ -107,7 +138,51 @@ pub fn setup(
 				align_self: AlignSelf::FlexStart,
 				position_type: PositionType::Absolute,
 				position: Rect {
-					left: Val::Px(4.0),
+					left: Val::Px(2.0),
+					bottom: Val::Px(2.0),
+					..Default::default()
+				},
+				..Default::default()
+			},
+			text: Text {
+				value: "".to_string(),
+				font: font_handle,
+				style: TextStyle {
+					font_size: 60.0,
+					color: Color::WHITE,
+				}
+			},
+			..Default::default()
+		})
+		.with(TurnCounter)
+		.spawn(TextComponents {
+			style: Style {
+				align_self: AlignSelf::FlexEnd,
+				position_type: PositionType::Absolute,
+				position: Rect {
+					right: Val::Px(2.0),
+					bottom: Val::Px(2.0),
+					..Default::default()
+				},
+				..Default::default()
+			},
+			text: Text {
+				value: "".to_string(),
+				font: font_handle,
+				style: TextStyle {
+					font_size:60.0,
+					color: Color::BLACK,
+				}
+			},
+			..Default::default()
+		})
+		.with(GhostCounter)
+		.spawn(TextComponents {
+			style: Style {
+				align_self: AlignSelf::FlexEnd,
+				position_type: PositionType::Absolute,
+				position: Rect {
+					right: Val::Px(4.0),
 					bottom: Val::Px(4.0),
 					..Default::default()
 				},
@@ -123,7 +198,8 @@ pub fn setup(
 			},
 			..Default::default()
 		})
-		.with(TurnCounter);
+		.with(GhostCounter)
+		.with(TopLevel);
 }
 
 pub struct UiPlugin;
@@ -134,6 +210,8 @@ impl Plugin for UiPlugin {
 			.add_startup_system(setup.system())
 			.add_system(fps_control_system.system())
 			.add_system(fps_update_system.system())
-			.add_system(turn_system.system());
+			.add_system(turn_system.system())
+			.add_system(reruns_system.system())
+			.add_system(reruns_recolour_system.system());
 	}
 }

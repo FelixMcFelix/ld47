@@ -5,9 +5,13 @@
             path: "assets/levels/intro.ron",
         ),
         (
+            name: "The Ascent",
+            path: "assets/levels/stairs.ron",
+        ),
+        (
             name: "Button Mania",
             path: "assets/levels/first_button.ron",
         ),
     ],
-    start_at: 1,
+    start_at: 0,
 )

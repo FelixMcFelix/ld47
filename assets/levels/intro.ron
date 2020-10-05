@@ -34,5 +34,5 @@
         ),
     ]),
     turn_limit: (7),
-    ghost_limit: Some((1)),
+    ghost_limit: Some((0)),
 )
