@@ -9,9 +9,17 @@
             path: "assets/levels/stairs.ron",
         ),
         (
-            name: "Button Mania",
+            name: "Buttoned Up",
+            path: "assets/levels/bup.ron",
+        ),
+        (
+            name: "Wait your Turn",
             path: "assets/levels/first_button.ron",
         ),
+        (
+            name: "Multitasking",
+            path: "assets/levels/bdown.ron",
+        ),
     ],
-    start_at: 0,
+    start_at: 4,
 )

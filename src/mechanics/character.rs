@@ -14,6 +14,7 @@ use super::{
 	Ordinate,
 	TurnLimit,
 };
+use crate::map::materials::AnimatedMaterial;
 use crate::map::{EntAnim, EntShape, Map, TexVariety};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -49,7 +50,7 @@ impl Character {
 	pub fn do_action(&mut self, action: CharacterCommand, map: &Map, colliders: &mut OccupationMap) -> Option<GridPosition> {
 		let supposed_dest = self.current.destination(action);
 
-		println!("{:?} -> {:?}", action, supposed_dest);
+		// println!("{:?} -> {:?}", action, supposed_dest);
 		let modif = supposed_dest.clamp(map.width, map.height);
 		let normalised = modif.unroll(map.width) as usize;
 
@@ -57,17 +58,17 @@ impl Character {
 			let form_norm = self.current.clamp(map.width, map.height).unroll(map.width) as usize;
 			colliders.move_collider(form_norm, normalised);
 			self.current = supposed_dest;
-			println!("moved to {:?}", supposed_dest);
+			// println!("moved to {:?}", supposed_dest);
 
 			Some(modif)
 		} else {
-			println!("move blocked");
+			// println!("move blocked");
 			None
 		}
 	}
 
 	pub fn do_queued_action(&mut self, map: &Map, colliders: &mut OccupationMap) {
-		println!("Queue!");
+		// println!("Queue!");
 		let action = self.command_list[self.cmd_list_pos];
 		self.do_action(action, map, colliders);
 		self.cmd_list_pos += 1;
@@ -94,17 +95,7 @@ impl Character {
 		asset_server: &Res<AssetServer>,
 		textures: &mut ResMut<Assets<Texture>>,
 	) {
-		// let texture_handle = asset_server
-		// 	.load_sync(&mut textures, "assets/placeholder/ramza.png")
-		// 	.unwrap();
-
 		let anim = EntAnim::Char;
-
-		// let material = materials.add(StandardMaterial {
-		// 	albedo_texture: Some(texture_handle),
-		// 	shaded: false,
-		// 	..Default::default()
-		// });
 
 		let (material, anim) = match anim.handles(asset_server, textures, materials) {
 			TexVariety::Unanim(mat) => (mat, None),
@@ -264,6 +255,18 @@ fn char_reset(
 			let new = character.new_me();
 
 			new.spawn(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures);
+
+			let anim = EntAnim::Ghost;
+
+			let (material, anim) = match anim.handles(&asset_server, &mut textures, &mut materials) {
+				TexVariety::Unanim(mat) => (mat, None),
+				TexVariety::Anim(mat) => (mat.first().unwrap(), Some(mat)),
+			};
+
+			if let Some(anim) = anim {
+				commands.remove_one::<AnimatedMaterial>(ent);
+				commands.insert_one(ent, anim);
+			}
 
 			character.reset();
 		}

@@ -38,19 +38,19 @@ impl SignalCounter {
 	pub fn register_signal_source(&mut self, signal: usize) {
 		let mut count = self.ensure_exists(signal);
 		count.needed += 1;
-		println!("Requiring signal {} -> {} needed", signal, count.needed);
+		// println!("Requiring signal {} -> {} needed", signal, count.needed);
 	}
 
 	pub fn increment_signal(&mut self, signal: usize) {
 		let mut count = self.ensure_exists(signal);
 		count.seen += 1;
-		println!("incrementing signal {} -> {} seen", signal, count.seen);
+		// println!("incrementing signal {} -> {} seen", signal, count.seen);
 	}
 
 	pub fn decrement_signal(&mut self, signal: usize) {
 		let mut count = self.ensure_exists(signal);
 		count.seen -= 1;
-		println!("decrementing signal {} -> {} seen", signal, count.seen);
+		// println!("decrementing signal {} -> {} seen", signal, count.seen);
 	}
 
 	pub fn signal_met(&self, signal: usize) -> bool {

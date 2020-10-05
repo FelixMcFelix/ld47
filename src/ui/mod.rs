@@ -205,10 +205,14 @@ pub fn setup(
 		.with(TopLevel)
 		.spawn(TextComponents {
 			style: Style {
-				align_self: AlignSelf::Center,
+				// align_self: AlignSelf::Center,
 				position_type: PositionType::Absolute,
+				// align_content: AlignContent::Center,
+				// justify_content: JustifyContent::Center,
+				// size: Size::new(Val::Percent(100.0), Val::Percent(100.0)),
 				position: Rect {
 					top: Val::Percent(20.5),
+					left: Val::Percent(25.0),
 					..Default::default()
 				},
 				..Default::default()
@@ -227,10 +231,14 @@ pub fn setup(
 		.with(LevelText)
 		.spawn(TextComponents {
 			style: Style {
-				align_self: AlignSelf::Center,
+				// align_self: AlignSelf::Center,
 				position_type: PositionType::Absolute,
+				// align_content: AlignContent::Center,
+				// justify_content: JustifyContent::Center,
+				// size: Size::new(Val::Percent(100.0), Val::Percent(99.0)),
 				position: Rect {
 					top: Val::Percent(20.0),
+					left: Val::Percent(25.0),
 					..Default::default()
 				},
 				..Default::default()

@@ -19,7 +19,7 @@ fn hello_world(time: Res<Time>, mut timer: ResMut<TestTtime>) {
 	timer.0.tick(time.delta_seconds);
 
 	if timer.0.finished {
-		println!("hello workd");
+		// println!("hello workd");
 	}
 }
 
@@ -40,7 +40,7 @@ fn main() {
 
 	App::build()
 		.add_resource(WindowDescriptor {
-			title: "LD47: Stuck in a Loop".to_string(),
+			title: "LD47: Multitasking".to_string(),
 			..Default::default()
 		})
 		.add_resource(ClearColor(Color::hex("341c27").expect("Ha")))

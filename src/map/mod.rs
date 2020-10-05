@@ -505,6 +505,7 @@ pub enum EntAnim {
 	ButtonGone,
 	Door,
 	Char,
+	Ghost,
 }
 }
 
@@ -534,6 +535,10 @@ impl EntAnim {
 			EntAnim::Char => (3.0, &[
 				"assets/char/char1.png",
 				"assets/char/char2.png",
+			][..]),
+			EntAnim::Ghost => (3.0, &[
+				"assets/char/ghost1.png",
+				"assets/char/ghost2.png",
 			][..]),
 		};
 
@@ -778,7 +783,7 @@ fn map_creator(
 	let mut was_empty = true;
 	for mut map in &mut query.iter() {
 		if !map.created {
-			println!("I am creating this map");
+			// println!("I am creating this map");
 			map.create_geometry(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures);
 			map.create_limits(&mut commands);
 			map.create_entities(&mut commands, &mut meshes, &mut materials, &asset_server, &mut textures);
