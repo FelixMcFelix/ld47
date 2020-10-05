@@ -188,6 +188,10 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						draw: Draw {
+							is_transparent: true,
+							..Default::default()
+						},
 						..Default::default()
 					});
 			},
@@ -211,6 +215,10 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						draw: Draw {
+							is_transparent: true,
+							..Default::default()
+						},
 						..Default::default()
 					});
 			},
@@ -235,6 +243,10 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						draw: Draw {
+							is_transparent: true,
+							..Default::default()
+						},
 						..Default::default()
 					});
 			},
@@ -258,6 +270,10 @@ impl EntData {
 					.with_bundle(PbrComponents {
 						mesh,
 						material,
+						draw: Draw {
+							is_transparent: true,
+							..Default::default()
+						},
 						..Default::default()
 					});
 			},

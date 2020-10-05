@@ -10,5 +10,6 @@ edition = "2018"
 bevy = "0.2"
 enum_primitive = "0.1"
 lazy_static = "1"
+numerals = "0.1"
 ron = "0.6"
 serde = { version = "1", features = ["serde_derive"] }

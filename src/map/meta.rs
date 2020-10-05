@@ -59,8 +59,8 @@ impl Levels {
 
 #[derive(Debug, Default, Deserialize, Serialize)]
 pub struct LevelInfo {
-	name: String,
-	path: String,
+	pub name: String,
+	pub path: String,
 }
 
 impl LevelInfo {

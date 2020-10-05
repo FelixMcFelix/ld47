@@ -3,6 +3,7 @@ pub mod camera;
 pub mod character;
 pub mod constants;
 pub mod ender;
+pub mod events;
 pub mod spawner;
 
 use bevy::prelude::*;
@@ -128,6 +129,7 @@ pub struct MechanicsPlugin;
 impl Plugin for MechanicsPlugin {
 	fn build(&self, app: &mut AppBuilder) {
 		app.add_plugin(RenderPlugin)
+			.add_plugin(events::EventPlugin)
 			.add_plugin(CameraPlugin)
 			.add_resource(OccupationMap::default())
 			.add_system(collision_populater.system())

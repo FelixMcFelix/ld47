@@ -1,8 +1,11 @@
+use std::time::Duration;
+
 use bevy::{
 	diagnostic::{Diagnostics, FrameTimeDiagnosticsPlugin},
 	prelude::*,
 };
 use crate::mechanics::GhostLimit;
+use crate::mechanics::events::SpawnLevelText;
 use crate::{
 	mechanics::{ActiveTurn, TurnLimit},
 };
@@ -199,7 +202,159 @@ pub fn setup(
 			..Default::default()
 		})
 		.with(GhostCounter)
-		.with(TopLevel);
+		.with(TopLevel)
+		.spawn(TextComponents {
+			style: Style {
+				align_self: AlignSelf::Center,
+				position_type: PositionType::Absolute,
+				position: Rect {
+					top: Val::Percent(20.5),
+					..Default::default()
+				},
+				..Default::default()
+			},
+			text: Text {
+				value: "".to_string(),
+				font: font_handle,
+				style: TextStyle {
+					font_size:60.0,
+					color: Color::BLACK,
+				}
+			},
+			..Default::default()
+		})
+		.with(FadeInOut::level_text())
+		.with(LevelText)
+		.spawn(TextComponents {
+			style: Style {
+				align_self: AlignSelf::Center,
+				position_type: PositionType::Absolute,
+				position: Rect {
+					top: Val::Percent(20.0),
+					..Default::default()
+				},
+				..Default::default()
+			},
+			text: Text {
+				value: "".to_string(),
+				font: font_handle,
+				style: TextStyle {
+					font_size:60.0,
+					color: Color::WHITE,
+				}
+			},
+			..Default::default()
+		})
+		.with(FadeInOut::level_text())
+		.with(LevelText);
+}
+
+pub struct LevelText;
+
+const LEVEL_TEXT_FADE_IN_TIME: Duration = Duration::from_millis(500);
+const LEVEL_TEXT_FADE_HOLD_TIME: Duration = Duration::from_secs(3);
+const LEVEL_TEXT_FADE_OUT_TIME: Duration = Duration::from_millis(1500);
+
+fn display_level_name(
+	evts: Res<Events<SpawnLevelText>>,
+	mut query: Query<(&LevelText, &mut Text, &mut FadeInOut)>,
+) {
+	for evt in evts.get_reader().iter(&evts) {
+		let text_to_show = &evt.0;
+		for (_tag, mut el, mut fade_state) in &mut query.iter() {
+			el.value = text_to_show.clone();
+			fade_state.start();
+		}
+	}
+}
+
+#[derive(Clone, Debug)]
+struct FadeInOut {
+	inn: Duration,
+	hold: Duration,
+	out: Duration,
+	active: Option<(FadeComponent, Timer)>,
+}
+
+#[derive(Copy, Clone, Debug)]
+enum FadeComponent {
+	In, Hold, Out,
+}
+
+impl FadeInOut {
+	fn new(inn: Duration, hold: Duration, out: Duration) -> Self {
+		Self {
+			inn,
+			hold,
+			out,
+			active: None,
+		}
+	}
+
+	fn level_text() -> Self {
+		Self::new(
+			LEVEL_TEXT_FADE_IN_TIME,
+			LEVEL_TEXT_FADE_HOLD_TIME,
+			LEVEL_TEXT_FADE_OUT_TIME
+		)
+	}
+
+	fn start(&mut self) {
+		self.active = Some((FadeComponent::In, Timer::new(self.inn, false)));
+	}
+
+	fn tick(&mut self, time: &Time) {
+		let mut erase = false;
+		if let Some((ref mut state, ref mut timer)) = &mut self.active {
+			timer.tick(time.delta_seconds);
+
+			if timer.just_finished {
+				match state {
+					FadeComponent::In => {
+						*timer = Timer::new(self.hold, false);
+						*state = FadeComponent::Hold;
+					},
+					FadeComponent::Hold => {
+						*timer = Timer::new(self.out, false);
+						*state = FadeComponent::Out;
+					},
+					FadeComponent::Out => {
+						erase = true;
+					},
+				}
+			}
+		}
+
+		if erase {
+			self.active = None;
+		}
+	}
+
+	fn opacity(&self) -> f32 {
+		match &self.active {
+			None => 0.0,
+			Some((FadeComponent::Hold, _timer)) => 1.0,
+			Some((FadeComponent::In, timer)) => timer.elapsed / timer.duration,
+			Some((FadeComponent::Out, timer)) => 1.0 - (timer.elapsed / timer.duration),
+		}
+	}
+}
+
+fn ui_fade_in_out_tick_system(
+	time: Res<Time>,
+	mut fader: Query<&mut FadeInOut>,
+) {
+	for mut el in &mut fader.iter() {
+		el.tick(&time);
+	}
+}
+
+fn ui_fade_in_out_system(
+	mut fader: Query<(&mut Text, &FadeInOut)>,
+) {
+	for (mut el, fade_state) in &mut fader.iter() {
+		el.style.color.a = fade_state.opacity();
+	}
 }
 
 pub struct UiPlugin;
@@ -212,6 +367,9 @@ impl Plugin for UiPlugin {
 			.add_system(fps_update_system.system())
 			.add_system(turn_system.system())
 			.add_system(reruns_system.system())
-			.add_system(reruns_recolour_system.system());
+			.add_system(reruns_recolour_system.system())
+			.add_system(display_level_name.system())
+			.add_system(ui_fade_in_out_tick_system.system())
+			.add_system(ui_fade_in_out_system.system());
 	}
 }

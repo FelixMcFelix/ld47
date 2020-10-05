@@ -6,6 +6,8 @@ use super::Alive;
 use super::DisplayGridPosition;
 use super::CollideGridPosition;
 use super::character::Character;
+use super::events::LevelExit;
+use super::events::Restart;
 
 #[derive(Debug, Default,)]
 pub struct Ender{ fired: bool }
@@ -21,6 +23,7 @@ impl Plugin for EnderPlugin {
 
 fn ender_progresses_level(
 	mut level_info: ResMut<Levels>,
+	mut exits: ResMut<Events<LevelExit>>,
 	mut query: Query<(&mut Ender, &DisplayGridPosition)>,
 	mut chars_query: Query<(&Character, &CollideGridPosition)>,
 	mut ents_query: Query<&mut Alive>,
@@ -41,7 +44,7 @@ fn ender_progresses_level(
 
 	if let Some(_end_pos) = do_end {
 		//despawn all
-		trigger_restart(&mut ents_query);
+		exits.send(LevelExit);
 
 		// increment map.
 		level_info.load_next();
@@ -50,14 +53,16 @@ fn ender_progresses_level(
 
 fn restart_button(
 	inputs: Res<Input<KeyCode>>,
+	mut res: ResMut<Events<Restart>>,
 	mut ents_query: Query<&mut Alive>,
 ) {
 	if inputs.just_pressed(KeyCode::Back) {
-		trigger_restart(&mut ents_query);
+		res.send(Restart);
+		// trigger_restart(&mut ents_query);
 	}
 }
 
-fn trigger_restart(
+pub fn trigger_restart(
 	ents_query: &mut Query<&mut Alive>,
 ) {
 	for mut alive in &mut ents_query.iter() {
