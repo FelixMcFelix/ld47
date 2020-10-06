@@ -92,8 +92,9 @@ fn reruns_recolour_system(
 pub fn setup(
 	mut commands: Commands,
 	asset_server: Res<AssetServer>,
+	mut fonts: ResMut<Assets<Font>>,
 ) {
-	let font_handle = asset_server.load_sync("assets/fonts/as/AlegreyaSans-Bold.ttf").unwrap();
+	let font_handle = asset_server.load_sync(&mut fonts, "assets/fonts/as/AlegreyaSans-Bold.ttf").unwrap();
 
 	commands
 		.spawn(UiCameraComponents::default())
