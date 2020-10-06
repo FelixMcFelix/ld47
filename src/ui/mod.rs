@@ -93,7 +93,7 @@ pub fn setup(
 	mut commands: Commands,
 	asset_server: Res<AssetServer>,
 ) {
-	let font_handle = asset_server.load("assets/fonts/as/AlegreyaSans-Bold.ttf").unwrap();
+	let font_handle = asset_server.load_sync("assets/fonts/as/AlegreyaSans-Bold.ttf").unwrap();
 
 	commands
 		.spawn(UiCameraComponents::default())

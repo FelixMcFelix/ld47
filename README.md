@@ -2,6 +2,7 @@
 
 ## Controls:
 * *Arrow keys* to move.
+* *Space* to wait.
 * *Backspace* to restart the current level.
 * *Z, X, C* to tilt the camera.
 
