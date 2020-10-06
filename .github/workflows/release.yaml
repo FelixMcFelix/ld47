@@ -52,10 +52,13 @@ jobs:
       - name: Build and release
         run: |
           cargo build --release
-          strip target/release/multitasking
+          strip target/release/ld47
+      run: |
+          mkdir -p tmpassets
+          cp -R ./assets/ ./tmpassets/
       - uses: papeloto/action-zip@v1
         with:
-          files: target/release/multitasking assets/
+          files: target/release/ld47 tmpassets/
           dest: multitasking-linux.zip
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
@@ -82,9 +85,13 @@ jobs:
       - name: Build and release
         run: |
           cargo build --release
+      - name: Manipulate Assets Folder
+        run: |
+          mkdir -p tmpassets
+          cp -R .\assets\ .\tmpassets\
       - uses: papeloto/action-zip@v1
         with:
-          files: target/release/ld47.exe assets/
+          files: target/release/ld47.exe tmpassets/
           dest: multitasking-windows.zip
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
