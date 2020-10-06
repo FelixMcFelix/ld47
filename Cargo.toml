@@ -6,8 +6,18 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[profile.release]
+lto = true
+opt-level = 3
+incremental = false
+codegen-units = 1
+
+[patch.crates-io]
+# Can revert to default branch when PR 580 is merged
+bevy = { git = "https://github.com/mockersf/bevy", branch = "ld" }
+
 [dependencies]
-bevy = "0.2"
+bevy = { git = "https://github.com/mockersf/bevy", branch = "ld" }
 enum_primitive = "0.1"
 lazy_static = "1"
 numerals = "0.1"

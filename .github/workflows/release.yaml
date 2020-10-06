@@ -1,0 +1,96 @@
+name: release-flow
+
+# thanks to mockersf - https://github.com/mockersf/kmanb/blob/main/.github/workflows/release.yaml
+# and thanks to https://raw.githubusercontent.com/will-hart/ld47/ld47/.github/workflows/release.yaml
+# https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
+# on: release
+
+on:
+  push:
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+*"
+
+jobs:
+  # build-macOS:
+  #   runs-on: macOS-latest
+
+  #   steps:
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: nightly
+  #         override: true
+  #     - name: Build and release
+  #       run: |
+  #         export CFLAGS="-fno-stack-check"
+  #         export MACOSX_DEPLOYMENT_TARGET="10.9"
+  #         cargo build --release
+  #         mkdir -p multitasking.app/Contents/MacOS
+  #         cp target/release/multitasking multitasking.app/Contents/MacOS/
+  #         strip multitasking.app/Contents/MacOS/multitasking
+  #         hdiutil create -fs HFS+ -volname "multitasking" -srcfolder multitasking.app multitasking.dmg
+  #     - name: Upload binaries to release
+  #       uses: svenstaro/upload-release-action@v2
+  #       with:
+  #         repo_token: ${{ secrets.GITHUB_TOKEN }}
+  #         file: multitasking.dmg
+  #         asset_name: multitasking-macOS.dmg
+  #         tag: ${{ github.ref }}
+  #         overwrite: true
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - name: Install Dependencies
+        run: sudo apt-get install pkg-config libx11-dev libasound2-dev libudev-dev
+      - name: Build and release
+        run: |
+          cargo build --release
+          strip target/release/multitasking
+      - uses: papeloto/action-zip@v1
+        with:
+          files: target/release/multitasking assets/
+          dest: multitasking-linux.zip
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: multitasking-linux.zip
+          asset_name: multitasking-linux.zip
+          tag: ${{ github.ref }}
+          overwrite: true
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - uses: seanmiddleditch/gha-setup-ninja@master
+      - uses: actions/setup-python@v2
+        with:
+          python-version: "3.x"
+      - name: Build and release
+        run: |
+          cargo build --release
+      - uses: papeloto/action-zip@v1
+        with:
+          files: target/release/ld47.exe assets/
+          dest: multitasking-windows.zip
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: multitasking-windows.zip
+          asset_name: multitasking-windows.zip
+          tag: ${{ github.ref }}
+          overwrite: true
